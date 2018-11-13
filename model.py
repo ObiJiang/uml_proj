@@ -62,7 +62,7 @@ class MetaCluster():
 
         """ Define LSTM network """
         with tf.variable_scope('LSTM'):
-            output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32)#, initial_state = cell_init_state)
+            output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
 
         """ Keep and Clear Op """
         # keep state op
@@ -104,13 +104,15 @@ class MetaCluster():
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
+
 
     def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            _,miss_rate = sess.run([model.keep_state_op,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+            states,miss_rate,var = sess.run([model.keep_state_op,model.miss_rate,model.state_variables],feed_dict={model.sequences:data,model.labels:labels})
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
 metaCluster = MetaCluster()
