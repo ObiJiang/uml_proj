@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow.contrib.slim as slim
 from misc import AttrDict, sample_floats
 import matplotlib.pyplot as plt
-
+from tqdm import tqdm
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -119,7 +119,7 @@ metaCluster = MetaCluster()
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     # training
-    for _ in range(100):
+    for _ in tqdm(range(100)):
         data, labels = metaCluster.create_dataset()
         metaCluster.train(data,labels,sess)
     # testing
