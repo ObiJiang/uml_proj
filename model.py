@@ -16,7 +16,7 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = 1
         self.k = 2
-        self.num_sequence = 100
+        self.num_sequence = 10
         self.lr = 0.01
         self.model = self.model()
 
