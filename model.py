@@ -121,7 +121,7 @@ metaCluster = MetaCluster()
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     # training
-    for _ in tqdm(range(10000)):
+    for _ in tqdm(range(1000)):
         data, labels = metaCluster.create_dataset()
         metaCluster.train(data,labels,sess)
     # testing
