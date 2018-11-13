@@ -45,7 +45,7 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
+        cells = [tf.contrib.rnn.BasicLSTMCell(4) for _ in range(2)]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
@@ -103,15 +103,15 @@ class MetaCluster():
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            _,_,loss = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
-        print("Epochs{}:{}".format(epoch_ind,loss))
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+        print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            _,loss = sess.run([model.keep_state_op,model.loss],feed_dict={model.sequences:data,model.labels:labels})
-            print("Epochs{}:{}".format(epoch_ind,loss))
+            _,miss_rate = sess.run([model.keep_state_op,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+            print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
 metaCluster = MetaCluster()
 
