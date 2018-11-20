@@ -29,8 +29,10 @@ class MetaCluster():
         xcenters = sample_floats(-1,1,2)
         ycenters = sample_floats(-1,1,2)
 
-        labels = np.random.randint(2, size=self.num_sequence)
-        labels[0] = 0
+        #labels = np.random.randint(2, size=self.num_sequence)
+        labels = np.arange(self.num_sequence)%2
+        np.random.shuffle(labels)
+
         data = np.zeros((self.num_sequence,2))
 
         mean = (xcenters[0],ycenters[0])
@@ -39,7 +41,6 @@ class MetaCluster():
 
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
-
 
         # plt.scatter(data[labels==1,0], data[labels==1,1])
         # plt.scatter(data[labels==0,0], data[labels==0,1])
