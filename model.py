@@ -26,22 +26,23 @@ class MetaCluster():
         self.saver = tf.train.Saver(max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        xcenters = sample_floats(1,10,2)
-        ycenters = sample_floats(1,10,2)
+        xcenters = sample_floats(-1,1,2)
+        ycenters = sample_floats(-1,1,2)
 
         labels = np.random.randint(2, size=self.num_sequence)
+        labels[0] = 0
         data = np.zeros((self.num_sequence,2))
 
         mean = (xcenters[0],ycenters[0])
-        cov = [[0.1, 0], [0, 0.1]]
+        cov = [[0.01, 0], [0, 0.01]]
         data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
 
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
 
-        # plt.scatter(data[labels==1,0], data[labels==1,1])
-        # plt.scatter(data[labels==0,0], data[labels==0,1])
-        # plt.show()
+        plt.scatter(data[labels==1,0], data[labels==1,1])
+        plt.scatter(data[labels==0,0], data[labels==0,1])
+        plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
@@ -175,3 +176,6 @@ if __name__ == '__main__':
 
             data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
+
+            # labels = (labels+1)%2
+            # metaCluster.test(data,labels,sess)
