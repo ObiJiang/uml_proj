@@ -4,6 +4,9 @@ import tensorflow.contrib.slim as slim
 from misc import AttrDict, sample_floats
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import argparse
+import os
+
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -12,13 +15,15 @@ def normalized_columns_initializer(std=1.0):
     return _initializer
 
 class MetaCluster():
-    def __init__(self):
+    def __init__(self,config):
+        self.config = config
         self.n_unints = 32
         self.batch_size = 1
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
         self.model = self.model()
+        self.saver = tf.train.Saver(max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
         xcenters = sample_floats(1,10,2)
@@ -101,29 +106,72 @@ class MetaCluster():
 
     def train(self,data,labels,sess):
         model = self.model
-        sess.run(model.clear_state_op)
+
         for epoch_ind in range(100):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
 
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
-
     def test(self,data,labels,sess):
         model = self.model
+
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
             states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
-            print("Epochs{}:{},{}".format(epoch_ind,miss_rate,loss))
+            print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
-metaCluster = MetaCluster()
+    def save_model(self, sess, epoch):
+        print('\nsaving model...')
 
+        # create path if not around
+        model_save_path = self.config.model_save_dir
+        if not os.path.isdir(model_save_path):
+            os.makedirs(model_save_path)
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    # training
-    for _ in tqdm(range(1000)):
-        data, labels = metaCluster.create_dataset()
-        metaCluster.train(data,labels,sess)
-    # testing
-    data, labels = metaCluster.create_dataset()
-    metaCluster.test(data,labels,sess)
+        model_name = '{}/model'.format(model_save_path)
+
+        save_path = self.saver.save(sess, model_name, global_step = epoch)
+        print('model saved at', save_path, '\n\n')
+
+if __name__ == '__main__':
+    # arguments
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--test', default=False, action='store_true')
+    parser.add_argument('--max_to_keep', default=3, type=int)
+    parser.add_argument('--model_save_dir', default='./out')
+    parser.add_argument('--training_exp_num', default=1000, type=int)
+
+    config = parser.parse_args()
+
+    if not config.test:
+        metaCluster = MetaCluster(config)
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            # training
+            for _ in tqdm(range(config.training_exp_num)):
+                data, labels = metaCluster.create_dataset()
+                metaCluster.train(data,labels,sess)
+
+            # saving models ...
+            metaCluster.save_model(sess,config.training_exp_num)
+
+            # testing
+            data, labels = metaCluster.create_dataset()
+            metaCluster.test(data,labels,sess)
+    else:
+        metaCluster = MetaCluster(config)
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            vars_ = {var.name.split(":")[0]: var for var in tf.global_variables()}
+            saver = tf.train.Saver(vars_, max_to_keep=config.max_to_keep)
+            save_dir = config.model_save_dir
+
+            checkpoint = tf.train.get_checkpoint_state(save_dir)
+            assert checkpoint is not None, "cannot load checkpoint at {}".format(save_dir)
+            save_path = checkpoint.model_checkpoint_path
+            print("Loading saved model from {}".format(save_path))
+            saver.restore(sess, save_path)
+
+            data, labels = metaCluster.create_dataset()
+            metaCluster.test(data,labels,sess)
