@@ -21,7 +21,7 @@ class MetaCluster():
         self.batch_size = 1
         self.k = 2
         self.num_sequence = 100
-        self.lr = 0.01
+        self.lr = 0.001
         self.model = self.model()
         self.saver = tf.train.Saver(max_to_keep=config.max_to_keep)
 
