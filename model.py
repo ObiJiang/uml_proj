@@ -21,7 +21,7 @@ class MetaCluster():
         self.batch_size = 1
         self.k = 2
         self.num_sequence = 100
-        self.lr = 0.001
+        self.lr = 0.01
         self.model = self.model()
         self.saver = tf.train.Saver(max_to_keep=config.max_to_keep)
 
@@ -40,7 +40,7 @@ class MetaCluster():
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
 
-        
+
         # plt.scatter(data[labels==1,0], data[labels==1,1])
         # plt.scatter(data[labels==0,0], data[labels==0,1])
         # plt.show()
@@ -116,7 +116,6 @@ class MetaCluster():
 
     def test(self,data,labels,sess):
         model = self.model
-
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
             states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
