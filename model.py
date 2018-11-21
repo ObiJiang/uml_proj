@@ -43,10 +43,10 @@ class MetaCluster():
 
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
-
-        # plt.scatter(data[labels==1,0], data[labels==1,1])
-        # plt.scatter(data[labels==0,0], data[labels==0,1])
-        # plt.show()
+        if self.config.show_graph:
+            plt.scatter(data[labels==1,0], data[labels==1,1])
+            plt.scatter(data[labels==0,0], data[labels==0,1])
+            plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
@@ -148,6 +148,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--test', default=False, action='store_true')
+    parser.add_argument('--show_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=2, type=int)
