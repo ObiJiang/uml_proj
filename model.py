@@ -18,7 +18,7 @@ class MetaCluster():
     def __init__(self,config):
         self.config = config
         self.n_unints = 32
-        self.batch_size = 1
+        self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
@@ -42,9 +42,9 @@ class MetaCluster():
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
 
-        # plt.scatter(data[labels==1,0], data[labels==1,1])
-        # plt.scatter(data[labels==0,0], data[labels==0,1])
-        # plt.show()
+        plt.scatter(data[labels==1,0], data[labels==1,1])
+        plt.scatter(data[labels==0,0], data[labels==0,1])
+        plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
@@ -102,7 +102,7 @@ class MetaCluster():
         """ Define Loss and Optimizer """
         loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
         miss_list = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_rate = tf.reduce_sum(tf.cast(miss_list,tf.float32))/self.num_sequence
+        miss_rate = tf.reduce_sum(tf.cast(miss_list,tf.float32))/(self.num_sequence*self.batch_size)
 
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         return AttrDict(locals())
@@ -142,6 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--test', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
+    parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--training_exp_num', default=1000, type=int)
 
     config = parser.parse_args()
@@ -152,7 +153,14 @@ if __name__ == '__main__':
             sess.run(tf.global_variables_initializer())
             # training
             for _ in tqdm(range(config.training_exp_num)):
-                data, labels = metaCluster.create_dataset()
+                data_list = []
+                labels_list = []
+                for _ in range(config.batch_size):
+                    data_one, labels_one = metaCluster.create_dataset()
+                    data_list.append(data_one)
+                    labels_list.append(labels_one)
+                data = np.concatenate(data_list)
+                labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
 
             # saving models ...
