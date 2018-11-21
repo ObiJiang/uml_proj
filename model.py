@@ -23,7 +23,9 @@ class MetaCluster():
         self.num_sequence = 100
         self.lr = 0.01
         self.model = self.model()
-        self.saver = tf.train.Saver(max_to_keep=config.max_to_keep)
+        vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
+        vars_ = {var.name.split(":")[0]: var for var in vars}
+        self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
         xcenters = sample_floats(-1,1,2)
@@ -42,9 +44,9 @@ class MetaCluster():
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
 
-        # plt.scatter(data[labels==1,0], data[labels==1,1])
-        # plt.scatter(data[labels==0,0], data[labels==0,1])
-        # plt.show()
+        plt.scatter(data[labels==1,0], data[labels==1,1])
+        plt.scatter(data[labels==0,0], data[labels==0,1])
+        plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
@@ -69,7 +71,7 @@ class MetaCluster():
         cell_init_state = tuple(state_variables)
 
         """ Define LSTM network """
-        with tf.variable_scope('LSTM'):
+        with tf.variable_scope('core'):
             output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
 
         """ Keep and Clear Op """
@@ -96,8 +98,8 @@ class MetaCluster():
         #         activation_fn=None,
         #         weights_initializer=normalized_columns_initializer(1.0),
         #         biases_initializer=None)
-
-        policy = tf.layers.dense(output,self.k)
+        with tf.variable_scope('core'):
+            policy = tf.layers.dense(output,self.k)
 
         """ Define Loss and Optimizer """
         loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
@@ -131,7 +133,6 @@ class MetaCluster():
             os.makedirs(model_save_path)
 
         model_name = '{}/model'.format(model_save_path)
-
         save_path = self.saver.save(sess, model_name, global_step = epoch)
         print('model saved at', save_path, '\n\n')
 
@@ -167,14 +168,23 @@ if __name__ == '__main__':
             metaCluster.save_model(sess,config.training_exp_num)
 
             # testing
-            data, labels = metaCluster.create_dataset()
+            data_list = []
+            labels_list = []
+            for _ in range(config.batch_size):
+                data_one, labels_one = metaCluster.create_dataset()
+                data_list.append(data_one)
+                labels_list.append(labels_one)
+            data = np.concatenate(data_list)
+            labels = np.concatenate(labels_list)
             metaCluster.test(data,labels,sess)
     else:
         config.batch_size = 1
         metaCluster = MetaCluster(config)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            vars_ = {var.name.split(":")[0]: var for var in tf.global_variables()}
+            #vars_ = {var.name.split(":")[0]: var for var in tf.global_variables()}
+            vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
+            vars_ = {var.name.split(":")[0]: var for var in vars}
             saver = tf.train.Saver(vars_, max_to_keep=config.max_to_keep)
             save_dir = config.model_save_dir
 
@@ -187,5 +197,5 @@ if __name__ == '__main__':
             data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
 
-            # labels = (labels+1)%2
-            # metaCluster.test(data,labels,sess)
+            labels = (labels+1)%2
+            metaCluster.test(data,labels,sess)
