@@ -42,9 +42,9 @@ class MetaCluster():
         mean = (xcenters[1],ycenters[1])
         data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
 
-        plt.scatter(data[labels==1,0], data[labels==1,1])
-        plt.scatter(data[labels==0,0], data[labels==0,1])
-        plt.show()
+        # plt.scatter(data[labels==1,0], data[labels==1,1])
+        # plt.scatter(data[labels==0,0], data[labels==0,1])
+        # plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
