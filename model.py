@@ -102,11 +102,18 @@ class MetaCluster():
             policy = tf.layers.dense(output,self.k)
 
         """ Define Loss and Optimizer """
-        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
-        miss_list = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_rate = tf.reduce_sum(tf.cast(miss_list,tf.float32))/(self.num_sequence*self.batch_size)
+        loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
+                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
+
+        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
+        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
+
+        miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
+
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
@@ -197,5 +204,5 @@ if __name__ == '__main__':
             data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
 
-            labels = (labels+1)%2
-            metaCluster.test(data,labels,sess)
+            # labels = (labels+1)%2
+            # metaCluster.test(data,labels,sess)
