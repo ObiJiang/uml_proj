@@ -170,6 +170,7 @@ if __name__ == '__main__':
             data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
     else:
+        config.batch_size = 1
         metaCluster = MetaCluster(config)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
