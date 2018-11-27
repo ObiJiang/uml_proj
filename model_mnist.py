@@ -39,7 +39,7 @@ class MetaCluster():
 
         data = np.zeros((self.num_sequence,self.fea))
 
-        mean = np.random.rand((self.k, self.fea))
+        mean = np.random.rand(self.k, self.fea)
         cov = np.ones((self.fea, self.fea))*0.01
         data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
         data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
