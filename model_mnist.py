@@ -39,12 +39,10 @@ class MetaCluster():
 
         data = np.zeros((self.num_sequence,self.fea))
 
-        mean = (xcenters[0],ycenters[0])
-        cov = [[0.01, 0], [0, 0.01]]
-        data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
-
-        mean = (xcenters[1],ycenters[1])
-        data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
+        mean = np.random.rand((self.k, self.fea))
+        cov = np.ones((self.fea, self.fea))*0.01
+        data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
+        data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
         if self.config.show_graph:
             plt.scatter(data[labels==1,0], data[labels==1,1])
             plt.scatter(data[labels==0,0], data[labels==0,1])
