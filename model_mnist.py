@@ -37,7 +37,7 @@ class MetaCluster():
         labels = np.arange(self.num_sequence)%2
         np.random.shuffle(labels)
 
-        data = np.zeros((self.num_sequence,2))
+        data = np.zeros((self.num_sequence,self.fea))
 
         mean = (xcenters[0],ycenters[0])
         cov = [[0.01, 0], [0, 0.01]]
