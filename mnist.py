@@ -11,7 +11,7 @@ class Generator_minst(object):
         x_train_f = x_train.reshape(-1, 28*28).astype(float)/255
         x_test_f = x_test.reshape(-1, 28*28).astype(float)/255
 
-        pca = PCA(n_components=350)
+        pca = PCA(n_components=200)
         x_train_pca = pca.fit_transform(x_train_f)
         print(np.sum(pca.explained_variance_ratio_))
 
@@ -27,7 +27,7 @@ class Generator_minst(object):
             self.x_train10[i] = x_train_pca[idx_train[i][0], :]
             self.x_test10[i] = x_test_f[idx_test[i][0], :]
 
-    def generate(self, size=500):
+    def generate(self, size=100):
         first = np.random.randint(10)
         second = np.random.randint(10)
         while first == second:

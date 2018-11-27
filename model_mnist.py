@@ -21,8 +21,8 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = 2
-        self.num_sequence = 1000
-        self.fea = 350
+        self.num_sequence = 200
+        self.fea = 200
         self.lr = 0.01
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -30,9 +30,6 @@ class MetaCluster():
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        xcenters = sample_floats(-1,1,2)
-        ycenters = sample_floats(-1,1,2)
-
         #labels = np.random.randint(2, size=self.num_sequence)
         labels = np.arange(self.num_sequence)%2
         np.random.shuffle(labels)
