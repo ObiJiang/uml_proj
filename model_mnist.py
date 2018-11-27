@@ -22,7 +22,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 200
-        self.fea = 200
+        self.fea = 5
         self.lr = 0.01
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -199,8 +199,9 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            generator = Generator_minst()
-            data, labels = generator.generate()
+            #generator = Generator_minst()
+            #data, labels = generator.generate()
+            data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
 
             # labels = (labels+1)%2
