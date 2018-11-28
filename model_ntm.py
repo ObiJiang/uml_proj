@@ -109,6 +109,22 @@ class MetaCluster():
 
         # clear state op
         update_ops = []
+        for state_variables, state in zip(cell_init_state.controller_state, states.controller_state):
+            update_ops.extend([state_variables[0].assign(state[0]),
+                                state_variables[1].assign(state[1])])
+
+        for state_variables, state in zip(cell_init_state.read_vector_list, states.read_vector_list):
+            update_ops.extend([state_variables.assign(state)])
+
+        update_ops.extend([cell_init_state.M.assign(states.M)])
+
+        for state_variables, state in zip(cell_init_state.w_list, states.w_list):
+            update_ops.extend([state_variables.assign(state)])
+
+        keep_state_op = tf.tuple(update_ops)
+
+        # clear state op
+        update_ops = []
         for state_variables, state in zip(cell_init_state.controller_state, cell_zero_state.controller_state):
             update_ops.extend([state_variables[0].assign(state[0]),
                                 state_variables[1].assign(state[1])])
@@ -147,14 +163,14 @@ class MetaCluster():
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            _,miss_rate = sess.run([model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
-        print("Epochs{}:{}".format(epoch_ind,miss_rate))
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+            print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            miss_rate,loss = sess.run([model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
+            _,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def save_model(self, sess, epoch):
