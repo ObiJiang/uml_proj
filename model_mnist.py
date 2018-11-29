@@ -36,7 +36,19 @@ class MetaCluster():
 
         data = np.zeros((self.num_sequence,self.fea))
 
-        mean = np.random.rand(self.k, self.fea)
+        e = 0.1*self.fea
+        c = 0
+        mean = np.zeros((self.k, self.fea))
+        while c<self.k:
+            m = np.random.rand(self.fea)
+            re = False
+            for i in range(c):
+                if np.linalg.norm(m-mean[i, :])<e:
+                    re = True
+            if not re:
+                mean[c, :] = m
+                c += 1
+
         cov = np.identity(self.fea)*0.01
         data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
         data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
