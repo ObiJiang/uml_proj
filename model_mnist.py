@@ -21,7 +21,7 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = 2
-        self.num_sequence = 200
+        self.num_sequence = 100
         self.fea = 2
         self.lr = 0.01
         self.model = self.model()
@@ -35,7 +35,7 @@ class MetaCluster():
         np.random.shuffle(labels)
 
         data = np.zeros((self.num_sequence,self.fea))
-
+        """
         e = 0.01*self.fea
         c = 0
         mean = np.zeros((self.k, self.fea))
@@ -51,7 +51,8 @@ class MetaCluster():
                 c += 1
             else:
                 print('resampling... ', c)
-
+        """
+        mean = np.random.rand(self.k, self.fea)
         cov = np.identity(self.fea)*0.01
         data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
         data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
