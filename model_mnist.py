@@ -22,7 +22,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 200
-        self.fea = 5
+        self.fea = 2
         self.lr = 0.01
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -36,7 +36,7 @@ class MetaCluster():
 
         data = np.zeros((self.num_sequence,self.fea))
 
-        e = 0.01*self.fea
+        e = 0.1*self.fea
         c = 0
         mean = np.zeros((self.k, self.fea))
         while c<self.k:
