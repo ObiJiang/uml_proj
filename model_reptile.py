@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import argparse
 import os
-from Reptile.variable import interpolate_vars, average_vars, subtract_vars, add_vars, scale_vars, VariableState
+from Reptile.variable import interpolate_vars_adam,interpolate_vars, average_vars, subtract_vars, add_vars, scale_vars, VariableState, adam_v_vars, adam_m_vars
 
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
@@ -20,6 +20,7 @@ class MetaCluster():
         self.config = config
         self.n_unints = 32
         self.batch_size = config.batch_size
+        self.model_batch_size = 1
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
@@ -29,8 +30,13 @@ class MetaCluster():
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
+        # all the adam stuff
+        self.adam_t = 1
         self.adam_mt = None
         self.adam_vt = None
+        self.adam_beta2 = 0.999
+        self.adam_beta1 = 0.9
+        self.adam_epsilon = 1e-08
 
     def create_dataset(self):
         labels = np.arange(self.num_sequence)%2
@@ -50,8 +56,8 @@ class MetaCluster():
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
     def model(self):
-        sequences = tf.placeholder(tf.float32, [self.batch_size,None, 2])
-        labels = tf.placeholder(tf.int32, [self.batch_size,None])
+        sequences = tf.placeholder(tf.float32, [self.model_batch_size,None, 2])
+        labels = tf.placeholder(tf.int32, [self.model_batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
         cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
@@ -60,7 +66,7 @@ class MetaCluster():
         """ Save init states (zeros) """
         with tf.variable_scope('Hidden_states'):
             state_variables = []
-            for s_c, s_h in cell.zero_state(self.batch_size,tf.float32):
+            for s_c, s_h in cell.zero_state(self.model_batch_size,tf.float32):
                 state_variables.append(
                         tf.nn.rnn_cell.LSTMStateTuple(
                         tf.Variable(s_c,trainable=False),
@@ -99,8 +105,8 @@ class MetaCluster():
         miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
         miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
-        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
+        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.model_batch_size)
+        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.model_batch_size)
 
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
@@ -115,17 +121,32 @@ class MetaCluster():
         old_vars = model_state.export_variables()
         new_vars = []
         miss_rate_batch = []
-        for _ in range(data.shape[0]):
+        for data_ind in range(data.shape[0]):
             sess.run(model.clear_state_op)
             for epoch_ind in range(100):
-                _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+                _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data[data_ind:data_ind+1,:],model.labels:labels[data_ind:data_ind+1,:]})
             miss_rate_batch.append(miss_rate)
             new_vars.append(model_state.export_variables())
             model_state.import_variables(old_vars)
 
-
         new_vars = average_vars(new_vars)
-        model_state.import_variables(interpolate_vars(old_vars, new_vars, self.lr))
+        # adam update stuff
+        self.adam_t += 1
+        self.adam_lr_t = self.lr*np.sqrt(1-np.power(self.adam_beta2,self.adam_t))/(1-np.power(self.adam_beta1,self.adam_t))
+
+        g = interpolate_vars(old_vars, new_vars, self.lr)
+        if self.adam_mt ==  None:
+            self.adam_mt = g
+        else:
+            self.adam_mt = adam_m_vars(self.adam_mt,g,self.adam_beta1)
+
+        if self.adam_vt ==  None:
+            self.adam_vt = [v * v for v in g]
+        else:
+            self.adam_vt = adam_v_vars(self.adam_vt,g,self.adam_beta2)
+
+        model_state.import_variables(interpolate_vars_adam(old_vars, self.adam_mt, self.adam_vt, self.adam_lr_t, self.adam_epsilon))
+        #model_state.import_variables(interpolate_vars(old_vars, new_vars, self.lr))
 
         print("Epochs{}:{}".format(epoch_ind,np.mean(miss_rate_batch)))
 

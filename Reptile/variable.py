@@ -10,14 +10,13 @@ def interpolate_vars(old_vars, new_vars, epsilon):
     """
     return add_vars(old_vars, scale_vars(subtract_vars(new_vars, old_vars), epsilon))
 
-def interpolate_vars_adam(old_vars, new_vars, lr , t, beta1=0.9,
-    beta2=0.999,
-    epsilon=1e-08):
+def interpolate_vars_adam(old_vars, m,v, lr, epsilon=1e-08):
     """
     Interpolate between two sequences of variables.
     """
 
-    return add_vars(old_vars, scale_vars(subtract_vars(new_vars, old_vars), epsilon))
+    intermediate = [v1*lr/(np.sqrt(v2)+epsilon) for v1, v2 in zip(m, v)]
+    return subtract_vars(old_vars, intermediate)
 
 def average_vars(var_seqs):
     """
@@ -39,6 +38,19 @@ def add_vars(var_seq_1, var_seq_2):
     Add two variable sequences.
     """
     return [v1 + v2 for v1, v2 in zip(var_seq_1, var_seq_2)]
+
+
+def adam_m_vars(var_seq_1, var_seq_2, beta1):
+    """
+    Add two variable sequences.
+    """
+    return [beta1*v1 + (1-beta1)*v2 for v1, v2 in zip(var_seq_1, var_seq_2)]
+
+def adam_v_vars(var_seq_1, var_seq_2, beta2):
+    """
+    Add two variable sequences.
+    """
+    return [beta2*v1 + (1-beta2)*v2*v2 for v1, v2 in zip(var_seq_1, var_seq_2)]
 
 def scale_vars(var_seq, scale):
     """
