@@ -23,11 +23,14 @@ class MetaCluster():
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
-        self.fea = 200
+        self.fea = 2
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
+
+        self.adam_mt = None
+        self.adam_vt = None
 
     def create_dataset(self):
         labels = np.arange(self.num_sequence)%2
@@ -101,7 +104,8 @@ class MetaCluster():
 
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
         #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
 
         return AttrDict(locals())
@@ -118,6 +122,7 @@ class MetaCluster():
             miss_rate_batch.append(miss_rate)
             new_vars.append(model_state.export_variables())
             model_state.import_variables(old_vars)
+
 
         new_vars = average_vars(new_vars)
         model_state.import_variables(interpolate_vars(old_vars, new_vars, self.lr))

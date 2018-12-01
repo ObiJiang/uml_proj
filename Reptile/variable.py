@@ -10,6 +10,15 @@ def interpolate_vars(old_vars, new_vars, epsilon):
     """
     return add_vars(old_vars, scale_vars(subtract_vars(new_vars, old_vars), epsilon))
 
+def interpolate_vars_adam(old_vars, new_vars, lr , t, beta1=0.9,
+    beta2=0.999,
+    epsilon=1e-08):
+    """
+    Interpolate between two sequences of variables.
+    """
+
+    return add_vars(old_vars, scale_vars(subtract_vars(new_vars, old_vars), epsilon))
+
 def average_vars(var_seqs):
     """
     Average a sequence of variable sequences.
