@@ -23,27 +23,22 @@ class MetaCluster():
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
+        self.fea = 200
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        xcenters = sample_floats(-1,1,2)
-        ycenters = sample_floats(-1,1,2)
-
-        #labels = np.random.randint(2, size=self.num_sequence)
         labels = np.arange(self.num_sequence)%2
         np.random.shuffle(labels)
 
-        data = np.zeros((self.num_sequence,2))
+        data = np.zeros((self.num_sequence,self.fea))
 
-        mean = (xcenters[0],ycenters[0])
-        cov = [[0.01, 0], [0, 0.01]]
-        data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
-
-        mean = (xcenters[1],ycenters[1])
-        data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
+        mean = np.random.rand(self.k, self.fea)*2-1
+        cov = np.identity(self.fea)*0.01
+        data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
+        data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
         if self.config.show_graph:
             plt.scatter(data[labels==1,0], data[labels==1,1])
             plt.scatter(data[labels==0,0], data[labels==0,1])
@@ -125,7 +120,7 @@ class MetaCluster():
             model_state.import_variables(old_vars)
 
         new_vars = average_vars(new_vars)
-        model_state.import_variables(interpolate_vars(old_vars, new_vars, 0.001))
+        model_state.import_variables(interpolate_vars(old_vars, new_vars, self.lr))
 
         print("Epochs{}:{}".format(epoch_ind,np.mean(miss_rate_batch)))
 
