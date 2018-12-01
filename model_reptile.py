@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import argparse
 import os
-from NeuralTuringMachine.ntm import NTMCell,NTMControllerState
+from Reptile.variable import interpolate_vars, average_vars, subtract_vars, add_vars, scale_vars, VariableState
 
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
@@ -55,90 +55,40 @@ class MetaCluster():
         sequences = tf.placeholder(tf.float32, [self.batch_size,None, 2])
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
-        """ Define Neural Turing Machine """
-        num_controller_layers = 2
-        num_controller_units = 16
-        num_memory_locations = 8
-        memory_size = 16
-        num_read_heads = 8
-        num_write_heads = 8
-        num_bits_per_output_vector = 32
-        clip_controller_output_to_value = 3
-        cell = NTMCell(num_controller_layers, num_controller_units, num_memory_locations, memory_size,
-            num_read_heads, num_write_heads, shift_range=3, output_dim=num_bits_per_output_vector,
-            clip_value=clip_controller_output_to_value)
+        # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
+        cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
+        cell = tf.contrib.rnn.MultiRNNCell(cells)
 
+        """ Save init states (zeros) """
         with tf.variable_scope('Hidden_states'):
-            cell_zero_state = cell.zero_state(self.batch_size,tf.float32)
             state_variables = []
-            for s_c, s_h in cell_zero_state.controller_state:
+            for s_c, s_h in cell.zero_state(self.batch_size,tf.float32):
                 state_variables.append(
                         tf.nn.rnn_cell.LSTMStateTuple(
                         tf.Variable(s_c,trainable=False),
                         tf.Variable(s_h,trainable=False))
                     )
-            controller_state_init = tuple(state_variables)
 
-            state_variables = []
-            for read_vector in cell_zero_state.read_vector_list:
-                state_variables.append(
-                        tf.Variable(read_vector,trainable=False)
-                    )
-            read_vector_list_init = state_variables
+        cell_init_state = tuple(state_variables)
 
-            M_init = tf.Variable(cell_zero_state.M,trainable=False)
-
-            state_variables = []
-            for w in cell_zero_state.w_list:
-                state_variables.append(
-                        tf.Variable(w,trainable=False)
-                    )
-            w_list_init = state_variables
-
-        cell_init_state = NTMControllerState(
-            controller_state=controller_state_init,
-            read_vector_list=read_vector_list_init,
-            w_list=w_list_init,
-            M=M_init)
-
-        """ Define NTM network """
+        """ Define LSTM network """
         with tf.variable_scope('core'):
             output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
 
         """ Keep and Clear Op """
-
-        # clear state op
+        # keep state op
         update_ops = []
-        for state_variables, state in zip(cell_init_state.controller_state, states.controller_state):
-            update_ops.extend([state_variables[0].assign(state[0]),
+        for state_variables, state in zip(cell_init_state, states):
+            update_ops.extend([ state_variables[0].assign(state[0]),
                                 state_variables[1].assign(state[1])])
-
-        for state_variables, state in zip(cell_init_state.read_vector_list, states.read_vector_list):
-            update_ops.extend([state_variables.assign(state)])
-
-        update_ops.extend([cell_init_state.M.assign(states.M)])
-
-        for state_variables, state in zip(cell_init_state.w_list, states.w_list):
-            update_ops.extend([state_variables.assign(state)])
-
         keep_state_op = tf.tuple(update_ops)
 
         # clear state op
         update_ops = []
-        for state_variables, state in zip(cell_init_state.controller_state, cell_zero_state.controller_state):
-            update_ops.extend([state_variables[0].assign(state[0]),
-                                state_variables[1].assign(state[1])])
-
-        for state_variables, state in zip(cell_init_state.read_vector_list, cell_zero_state.read_vector_list):
-            update_ops.extend([state_variables.assign(state)])
-
-        update_ops.extend([cell_init_state.M.assign(cell_zero_state.M)])
-
-        for state_variables, state in zip(cell_init_state.w_list, cell_zero_state.w_list):
-            update_ops.extend([state_variables.assign(state)])
-
+        for state_variables, state in zip(cell_init_state, states):
+            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0])),
+                                state_variables[1].assign(tf.zeros_like(state[1]))])
         clear_state_op = tf.tuple(update_ops)
-
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
@@ -157,20 +107,33 @@ class MetaCluster():
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+
         return AttrDict(locals())
 
-    def train(self,data,labels,sess):
+    def train(self,data,labels,sess, model_state, full_state=None):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
-            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
-        print("Epochs{}:{}".format(epoch_ind,miss_rate))
+        old_vars = model_state.export_variables()
+        new_vars = []
+        miss_rate_batch = []
+        for _ in range(data.shape[0]):
+            for epoch_ind in range(100):
+                _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+            miss_rate_batch.append(miss_rate)
+            new_vars.append(model_state.export_variables())
+            model_state.import_variables(old_vars)
+
+        new_vars = average_vars(new_vars)
+        model_state.import_variables(interpolate_vars(old_vars, new_vars, 0.001))
+
+        print("Epochs{}:{}".format(epoch_ind,np.mean(miss_rate_batch)))
 
     def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            _,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
+            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def save_model(self, sess, epoch):
@@ -201,6 +164,9 @@ if __name__ == '__main__':
     if not config.test:
         metaCluster = MetaCluster(config)
         with tf.Session() as sess:
+            model_state = VariableState(sess, tf.trainable_variables())
+            full_state = VariableState(sess,tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
+
             sess.run(tf.global_variables_initializer())
             # training
             for _ in tqdm(range(config.training_exp_num)):
@@ -212,7 +178,7 @@ if __name__ == '__main__':
                     labels_list.append(labels_one)
                 data = np.concatenate(data_list)
                 labels = np.concatenate(labels_list)
-                metaCluster.train(data,labels,sess)
+                metaCluster.train(data,labels,sess,model_state,full_state)
 
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
@@ -246,6 +212,3 @@ if __name__ == '__main__':
 
             data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
-
-            # labels = (labels+1)%2
-            # metaCluster.test(data,labels,sess)
