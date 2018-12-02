@@ -112,7 +112,7 @@ class MetaCluster():
 
         #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
-        #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(loss[0])
 
         return AttrDict(locals())
 
@@ -130,23 +130,23 @@ class MetaCluster():
             model_state.import_variables(old_vars)
 
         new_vars = average_vars(new_vars)
-        # adam update stuff
-        self.adam_t += 1
-        self.adam_lr_t = self.lr*np.sqrt(1-np.power(self.adam_beta2,self.adam_t))/(1-np.power(self.adam_beta1,self.adam_t))
+        """ Adam Update Rule """
+        # self.adam_t += 1
+        # self.adam_lr_t = self.lr*np.sqrt(1-np.power(self.adam_beta2,self.adam_t))/(1-np.power(self.adam_beta1,self.adam_t))
 
-        g = interpolate_vars(old_vars, new_vars, self.lr)
-        if self.adam_mt ==  None:
-            self.adam_mt = g
-        else:
-            self.adam_mt = adam_m_vars(self.adam_mt,g,self.adam_beta1)
-
-        if self.adam_vt ==  None:
-            self.adam_vt = [v * v for v in g]
-        else:
-            self.adam_vt = adam_v_vars(self.adam_vt,g,self.adam_beta2)
-
-        model_state.import_variables(interpolate_vars_adam(old_vars, self.adam_mt, self.adam_vt, self.adam_lr_t, self.adam_epsilon))
-        #model_state.import_variables(interpolate_vars(old_vars, new_vars, self.lr))
+        # g = interpolate_vars(old_vars, new_vars, self.lr)
+        # if self.adam_mt ==  None:
+        #     self.adam_mt = g
+        # else:
+        #     self.adam_mt = adam_m_vars(self.adam_mt,g,self.adam_beta1)
+        #
+        # if self.adam_vt ==  None:
+        #     self.adam_vt = [v * v for v in g]
+        # else:
+        #     self.adam_vt = adam_v_vars(self.adam_vt,g,self.adam_beta2)
+        #
+        # model_state.import_variables(interpolate_vars_adam(old_vars, self.adam_mt, self.adam_vt, self.adam_lr_t, self.adam_epsilon))
+        model_state.import_variables(interpolate_vars(old_vars, new_vars, self.lr))
 
         print("Epochs{}:{}".format(epoch_ind,np.mean(miss_rate_batch)))
 
@@ -185,12 +185,13 @@ if __name__ == '__main__':
     if not config.test:
         metaCluster = MetaCluster(config)
         with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+
             model_state = VariableState(sess, tf.trainable_variables())
             full_state = VariableState(sess,tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES))
-
-            sess.run(tf.global_variables_initializer())
             # training
             for _ in tqdm(range(config.training_exp_num)):
+
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
@@ -199,6 +200,7 @@ if __name__ == '__main__':
                     labels_list.append(labels_one)
                 data = np.concatenate(data_list)
                 labels = np.concatenate(labels_list)
+
                 metaCluster.train(data,labels,sess,model_state,full_state)
 
             # saving models ...

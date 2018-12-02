@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 
+# attention + bi-directional
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -20,7 +21,7 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = 2
-        self.num_sequence = 100
+        self.num_sequence = 30
         self.lr = 0.01
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -73,6 +74,7 @@ class MetaCluster():
         """ Define LSTM network """
         with tf.variable_scope('core'):
             output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
+            #output, states = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(cell, sequences, dtype=tf.float32, initial_states_fw = cell_init_state)
 
         """ Keep and Clear Op """
         # keep state op
@@ -105,13 +107,13 @@ class MetaCluster():
 
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
+        for epoch_ind in range(50):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
 
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
