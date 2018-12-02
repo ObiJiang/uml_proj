@@ -122,9 +122,10 @@ class MetaCluster():
         """ Define Policy and Value """
         with tf.variable_scope('core'):
             output_stack = tf.concat(output, 2)
-            atten_weights = tf.matmul(output_stack,output_stack,transpose_b=True)
-            attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output_stack,axis=2),axis=2)
-            policy = tf.layers.dense(attended_output,self.k)
+            # atten_weights = tf.matmul(output_stack,output_stack,transpose_b=True)
+            # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output_stack,axis=2),axis=2)
+            # policy = tf.layers.dense(attended_output,self.k)
+            policy = tf.layers.dense(output_stack,self.k)
             #policy = tf.layers.dense(tf.nn.relu(tf.layers.dense(output_stack,16)),self.k)
 
         """ Define Loss and Optimizer """
