@@ -103,7 +103,7 @@ class MetaCluster():
         update_ops = []
         for state_variables, state in zip(cell_init_state_bw, states):
             update_ops.extend([ state_variables[0].assign(state[1][0]),
-                                state_variables[1].assign(state[1][0])])
+                                state_variables[1].assign(state[1][1])])
 
         keep_state_op = tf.tuple(update_ops)
 
