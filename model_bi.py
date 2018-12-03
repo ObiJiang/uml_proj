@@ -99,8 +99,6 @@ class MetaCluster():
             update_ops.extend([ state_variables[0].assign(state[0]),
                                 state_variables[1].assign(state[1])])
 
-
-        update_ops = []
         for state_variables, state in zip(cell_init_state_bw, states[1]):
             update_ops.extend([ state_variables[0].assign(state[0]),
                                 state_variables[1].assign(state[1])])
