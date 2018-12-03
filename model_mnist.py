@@ -126,7 +126,7 @@ class MetaCluster():
 
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0]))
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
