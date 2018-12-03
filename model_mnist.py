@@ -164,8 +164,8 @@ if __name__ == '__main__':
     parser.add_argument('--show_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
-    parser.add_argument('--batch_size', default=10, type=int)
-    parser.add_argument('--training_exp_num', default=1000, type=int)
+    parser.add_argument('--batch_size', default=20, type=int)
+    parser.add_argument('--training_exp_num', default=100, type=int)
 
     config = parser.parse_args()
 
