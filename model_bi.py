@@ -56,11 +56,11 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        fw_cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(1)]
+        fw_cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
         fw_cell = tf.contrib.rnn.MultiRNNCell(fw_cells)
 
 
-        bw_cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(1)]
+        bw_cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
         bw_cell = tf.contrib.rnn.MultiRNNCell(bw_cells)
 
         """ Save init states (zeros) """
@@ -140,7 +140,7 @@ class MetaCluster():
 
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
