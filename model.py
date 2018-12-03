@@ -142,7 +142,7 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32,2]]
+        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [64,64]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
@@ -159,8 +159,8 @@ class MetaCluster():
 
         """ Define LSTM network """
         with tf.variable_scope('core'):
-            #output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
-            output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
+            output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
+            #output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
             #output, states = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(cell, sequences, dtype=tf.float32, initial_states_fw = cell_init_state)
 
         """ Keep and Clear Op """
@@ -180,8 +180,8 @@ class MetaCluster():
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
-            #policy = tf.layers.dense(output,self.k)
-            policy = output
+            policy = tf.layers.dense(output,self.k)
+            #policy = output
 
         """ Define Loss and Optimizer """
         loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
