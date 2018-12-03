@@ -238,7 +238,7 @@ if __name__ == '__main__':
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             # training
-            for _ in tqdm(range(int(config.training_exp_num/10))):
+            for _ in tqdm(range(int(config.training_exp_num))):
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
@@ -247,8 +247,7 @@ if __name__ == '__main__':
                     labels_list.append(labels_one)
                 data = np.concatenate(data_list)
                 labels = np.concatenate(labels_list)
-                for _ in range(int(10)):
-                    metaCluster.train(data,labels,sess)
+                metaCluster.train(data,labels,sess)
 
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
