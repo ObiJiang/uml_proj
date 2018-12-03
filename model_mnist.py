@@ -126,7 +126,7 @@ class MetaCluster():
 
         miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0]))
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     parser.add_argument('--show_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
-    parser.add_argument('--batch_size', default=20, type=int)
+    parser.add_argument('--batch_size', default=25, type=int)
     parser.add_argument('--training_exp_num', default=100, type=int)
 
     config = parser.parse_args()
