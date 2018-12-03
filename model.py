@@ -113,7 +113,7 @@ class MetaCluster():
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(50):
+        for epoch_ind in range(100):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
 
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
