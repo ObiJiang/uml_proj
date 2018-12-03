@@ -201,8 +201,8 @@ class MetaCluster():
         miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
         miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
 
-        #miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
-        miss_rate = tf.reduce_sum(tf.cast(tf.minimum(miss_list_0,miss_list_1),tf.float32))/(self.num_sequence*self.batch_size)
+        miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
+        #miss_rate = tf.reduce_sum(tf.cast(tf.minimum(miss_list_0,miss_list_1),tf.float32))/(self.num_sequence*self.batch_size)
 
         l2 = 0.0005 * sum(
             tf.nn.l2_loss(tf_var)
