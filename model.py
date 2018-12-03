@@ -12,6 +12,7 @@ from tensorflow.python.ops.rnn import _transpose_batch_time
 # maml
 # put lstm ouput into lstm
 # reptile + ntm
+# just 5 iterations
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
