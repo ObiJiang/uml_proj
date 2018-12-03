@@ -95,27 +95,27 @@ class MetaCluster():
         """ Keep and Clear Op """
         # keep state op
         update_ops = []
-        for state_variables, state in zip(cell_init_state_fw, states):
-            update_ops.extend([ state_variables[0].assign(state[0][0]),
-                                state_variables[1].assign(state[0][1])])
+        for state_variables, state in zip(cell_init_state_fw, states[0]):
+            update_ops.extend([ state_variables[0].assign(state[0]),
+                                state_variables[1].assign(state[1])])
 
 
         update_ops = []
-        for state_variables, state in zip(cell_init_state_bw, states):
-            update_ops.extend([ state_variables[0].assign(state[1][0]),
-                                state_variables[1].assign(state[1][1])])
+        for state_variables, state in zip(cell_init_state_bw, states[1]):
+            update_ops.extend([ state_variables[0].assign(state[0]),
+                                state_variables[1].assign(state[1])])
 
         keep_state_op = tf.tuple(update_ops)
 
         # clear state op
         update_ops = []
-        for state_variables, state in zip(cell_init_state_fw, states):
-            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0][0])),
-                                state_variables[1].assign(tf.zeros_like(state[0][1]))])
+        for state_variables, state in zip(cell_init_state_fw, states[0]):
+            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0])),
+                                state_variables[1].assign(tf.zeros_like(state[1]))])
 
-        for state_variables, state in zip(cell_init_state_bw, states):
-            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[1][0])),
-                                state_variables[1].assign(tf.zeros_like(state[1][1]))])
+        for state_variables, state in zip(cell_init_state_bw, states[1]):
+            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0])),
+                                state_variables[1].assign(tf.zeros_like(state[1]))])
 
         clear_state_op = tf.tuple(update_ops)
 
