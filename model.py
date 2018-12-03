@@ -43,20 +43,20 @@ class MetaCluster():
 
         data = np.zeros((self.num_sequence,2))
 
-        if xcenters[0] < xcenters[1]:
-            mean = (xcenters[0],ycenters[0])
-            cov = [[0.01, 0], [0, 0.01]]
-            data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
+        # if xcenters[0] < xcenters[1]:
+        mean = (xcenters[0],ycenters[0])
+        cov = [[0.01, 0], [0, 0.01]]
+        data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
 
-            mean = (xcenters[1],ycenters[1])
-            data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
-        else:
-            mean = (xcenters[1],ycenters[1])
-            cov = [[0.01, 0], [0, 0.01]]
-            data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
-
-            mean = (xcenters[0],ycenters[0])
-            data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
+        mean = (xcenters[1],ycenters[1])
+        data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
+        # else:
+        #     mean = (xcenters[1],ycenters[1])
+        #     cov = [[0.01, 0], [0, 0.01]]
+        #     data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
+        #
+        #     mean = (xcenters[0],ycenters[0])
+        #     data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
 
         if self.config.show_graph:
             plt.scatter(data[labels==1,0], data[labels==1,1])
@@ -184,8 +184,16 @@ class MetaCluster():
             #policy = output
 
         """ Define Loss and Optimizer """
-        loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
-                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+        # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
+        #         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+
+        loss_batch_class = [tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),
+                tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy)]
+
+
+        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
+
+        loss = tf.reduce_mean(loss_batch)
 
         miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
         miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
@@ -200,7 +208,7 @@ class MetaCluster():
                 for tf_var in tf.trainable_variables()
                 if ("core" in tf_var.name)
         )
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
