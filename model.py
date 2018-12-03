@@ -195,16 +195,17 @@ class MetaCluster():
 
         loss = tf.reduce_mean(loss_batch)
 
-        # miss_list_0 = tf.squeeze(tf.reduce_mean(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1))
-        # miss_list_1 = tf.squeeze(tf.reduce_mean(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1))
-        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
+        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
+        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
 
-        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
-        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
+        # miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        # miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
-        #miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1))/(self.num_sequence*self.batch_size)
+        # miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
+        # miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
+        #
+        # miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
+        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1))/(self.num_sequence*self.batch_size)
 
         l2 = 0.0005 * sum(
             tf.nn.l2_loss(tf_var)
@@ -220,6 +221,7 @@ class MetaCluster():
         for epoch_ind in range(100):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
+            print(miss_rate.shape)
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess):
