@@ -174,21 +174,14 @@ class MetaCluster():
             #policy = output
 
         """ Define Loss and Optimizer """
-        # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
-        #         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
-                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
+        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32),axis=1,keepdims=True)
+        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32),axis=1,keepdims=True)
 
-
-        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
-
-        loss = tf.reduce_mean(loss_batch)
-
-        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
-        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
-
-        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
+        real_miss_list = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_rate = tf.reduce_sum(tf.cast(real_miss_list,tf.float32))/(self.num_sequence*self.batch_size)
 
         l2 = 0.0005 * sum(
             tf.nn.l2_loss(tf_var)
@@ -196,22 +189,32 @@ class MetaCluster():
                 if ("core" in tf_var.name)
         )
 
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+
+        offset = tf.argmax(tf.concat([miss_rate_0,miss_rate_1],axis=1),axis=1)
+
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
+        offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
+        sess.run(model.clear_state_op)
+        test_labels = (labels + np.expand_dims(offset,axis=1))%2
         for epoch_ind in range(100):
-            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
-            #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:test_labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
+        offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
+        sess.run(model.clear_state_op)
+        test_labels = (labels + np.expand_dims(offset,axis=1))%2
+
         for epoch_ind in range(100):
-            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
+            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:test_labels})
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def save_model(self, sess, epoch):
