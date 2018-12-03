@@ -123,7 +123,8 @@ class MetaCluster():
         for epoch_ind in range(20):
             #_,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             _,miss_rate = sess.run([model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
-
+            if epoch_ind == 0:
+                print("Epochs{}:{}".format(epoch_ind,miss_rate))
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess):
