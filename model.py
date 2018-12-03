@@ -187,8 +187,8 @@ class MetaCluster():
         # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
         #         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
 
-        loss_batch_class = [tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),
-                tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy)]
+        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
+                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
 
 
         loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
