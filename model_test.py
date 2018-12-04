@@ -13,7 +13,6 @@ from tensorflow.python.ops.rnn import _transpose_batch_time
 # put lstm ouput into lstm
 # reptile + ntm
 # just 5 iterations
-# also try 10 clusters
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -171,28 +170,18 @@ class MetaCluster():
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
-            # atten_weights = tf.matmul(output,output,transpose_b=True)
-            # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
-            # policy = tf.layers.dense(attended_output,self.k)
             policy = tf.layers.dense(output,self.k)
             #policy = output
 
         """ Define Loss and Optimizer """
-        # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
-        #         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
-                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
+        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32),axis=1,keepdims=True)
+        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32),axis=1,keepdims=True)
 
-
-        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
-
-        loss = tf.reduce_mean(loss_batch)
-
-        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
-        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
-
-        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
+        real_miss_list = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_rate = tf.reduce_sum(tf.cast(real_miss_list,tf.float32))/(self.num_sequence*self.batch_size)
 
         l2 = 0.0005 * sum(
             tf.nn.l2_loss(tf_var)
@@ -200,27 +189,33 @@ class MetaCluster():
                 if ("core" in tf_var.name)
         )
 
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+
+        offset = tf.argmin(tf.concat([miss_rate_0,miss_rate_1],axis=1),axis=1)
+
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
-            #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
+            offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
+
+        test_labels = (labels + np.expand_dims(offset,axis=1))%2
+        for epoch_ind in range(100):
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:test_labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
-    def test(self,data,labels,sess,validation=False):
+    def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
-            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
-            if not validation:
-                print("Epochs{}:{}".format(epoch_ind,miss_rate))
-        if validation:
-            print("Epochs{}:{}".format(epoch_ind,miss_rate))
+        offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
 
+        test_labels = (labels + np.expand_dims(offset,axis=1))%2
+        for epoch_ind in range(100):
+            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:test_labels})
+            print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -252,7 +247,7 @@ if __name__ == '__main__':
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             # training
-            for train_ind in tqdm(range(int(config.training_exp_num))):
+            for _ in tqdm(range(int(config.training_exp_num))):
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
@@ -263,18 +258,6 @@ if __name__ == '__main__':
                 labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
 
-                if train_ind % 10 == 0:
-                    print('-----validation-----')
-                    # validation
-                    data_list = []
-                    labels_list = []
-                    for _ in range(config.batch_size):
-                        data_one, labels_one = metaCluster.create_dataset()
-                        data_list.append(data_one)
-                        labels_list.append(labels_one)
-                    data = np.concatenate(data_list)
-                    labels = np.concatenate(labels_list)
-                    metaCluster.test(data,labels,sess,validation=True)
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
 
