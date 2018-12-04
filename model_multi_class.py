@@ -26,7 +26,7 @@ class MetaCluster():
         self.config = config
         self.n_unints = 32
         self.batch_size = config.batch_size
-        self.k = 3
+        self.k = 5
         self.num_sequence = 100
         self.fea = 2
         self.lr = 0.003
@@ -36,7 +36,7 @@ class MetaCluster():
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        labels = np.arange(self.num_sequence)%2
+        labels = np.arange(self.num_sequence)%self.k
         np.random.shuffle(labels)
 
         data = np.zeros((self.num_sequence,self.fea))
@@ -47,12 +47,13 @@ class MetaCluster():
 
         sort_ind = np.argsort(mean[:,0])
         for ind in sort_ind:
-            cov = np.random.normal(size=(self.fea,self.fea))
+            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*100)
             cov = cov.T @ cov
             data[labels==ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==ind)))
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
+                print(i)
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
