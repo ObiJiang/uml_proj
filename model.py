@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
+from mnist import Generator_minst
 
 # attention + bi-directional
 # maml
@@ -305,7 +306,9 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            data, labels = metaCluster.create_dataset()
+            generator = Generator_minst(2)
+            data, labels = generator.generate(50)
+            #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
 
             # labels = (labels+1)%2

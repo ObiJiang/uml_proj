@@ -4,14 +4,14 @@ from sklearn.decomposition import PCA
 
 class Generator_minst(object):
 
-    def __init__(self):
+    def __init__(self, fea=200):
         mnist = tf.keras.datasets.mnist
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
         x_train_f = x_train.reshape(-1, 28*28).astype(float)/255
         x_test_f = x_test.reshape(-1, 28*28).astype(float)/255
 
-        pca = PCA(n_components=200)
+        pca = PCA(n_components=fea)
         x_train_pca = pca.fit_transform(x_train_f)
         print(np.sum(pca.explained_variance_ratio_))
 
