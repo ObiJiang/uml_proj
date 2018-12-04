@@ -27,7 +27,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 2
+        self.fea = 200
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -135,6 +135,9 @@ class MetaCluster():
         cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
+        decode_cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32]]
+        decode_cell = tf.contrib.rnn.MultiRNNCell(decode_cells)
+
         """ Save init states (zeros) """
         with tf.variable_scope('Hidden_states'):
             state_variables = []
@@ -170,18 +173,33 @@ class MetaCluster():
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
-            policy = tf.layers.dense(output,self.k)
+            atten_weights = tf.matmul(output,output,transpose_b=True)
+            attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
+            #attened_sequence = tf.layers.dense(attended_output,self.k)
+            #policy = tf.layers.dense(output,self.k)
             #policy = output
+        with tf.variable_scope('core'):
+            decode_output, decode_states = tf.nn.dynamic_rnn(decode_cells, attended_output, dtype=tf.float32)
+
+        with tf.variable_scope('core'):
+            policy = tf.layers.dense(decode_output,self.k)
 
         """ Define Loss and Optimizer """
-        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
+        # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
+        #         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
 
-        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32),axis=1,keepdims=True)
-        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32),axis=1,keepdims=True)
+        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
+                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
 
-        real_miss_list = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_rate = tf.reduce_sum(tf.cast(real_miss_list,tf.float32))/(self.num_sequence*self.batch_size)
+
+        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
+
+        loss = tf.reduce_mean(loss_batch)
+
+        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
+        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
+
+        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
 
         l2 = 0.0005 * sum(
             tf.nn.l2_loss(tf_var)
@@ -189,33 +207,27 @@ class MetaCluster():
                 if ("core" in tf_var.name)
         )
 
-        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
-
-        offset = tf.argmin(tf.concat([miss_rate_0,miss_rate_1],axis=1),axis=1)
-
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
-            offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
-
-        test_labels = (labels + np.expand_dims(offset,axis=1))%2
-        for epoch_ind in range(100):
-            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:test_labels})
+        for epoch_ind in range(20):
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+            #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
-    def test(self,data,labels,sess):
+    def test(self,data,labels,sess,validation=False):
         model = self.model
         sess.run(model.clear_state_op)
-        offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
-
-        test_labels = (labels + np.expand_dims(offset,axis=1))%2
         for epoch_ind in range(100):
-            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:test_labels})
+            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
+            if not validation:
+                print("Epochs{}:{}".format(epoch_ind,miss_rate))
+        if validation:
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
+
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -258,6 +270,18 @@ if __name__ == '__main__':
                 labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
 
+                if train_ind % 10 == 0:
+                    print('-----validation-----')
+                    # validation
+                    data_list = []
+                    labels_list = []
+                    for _ in range(config.batch_size):
+                        data_one, labels_one = metaCluster.create_dataset()
+                        data_list.append(data_one)
+                        labels_list.append(labels_one)
+                    data = np.concatenate(data_list)
+                    labels = np.concatenate(labels_list)
+                    metaCluster.test(data,labels,sess,validation=True)
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
 

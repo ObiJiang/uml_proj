@@ -13,6 +13,7 @@ from tensorflow.python.ops.rnn import _transpose_batch_time
 # put lstm ouput into lstm
 # reptile + ntm
 # just 5 iterations
+# also try 10 clusters
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -27,7 +28,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 200
+        self.fea = 2
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -170,10 +171,10 @@ class MetaCluster():
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
-            atten_weights = tf.matmul(output,output,transpose_b=True)
-            attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
-            policy = tf.layers.dense(attended_output,self.k)
-            #policy = tf.layers.dense(output,self.k)
+            # atten_weights = tf.matmul(output,output,transpose_b=True)
+            # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
+            # policy = tf.layers.dense(attended_output,self.k)
+            policy = tf.layers.dense(output,self.k)
             #policy = output
 
         """ Define Loss and Optimizer """
@@ -205,7 +206,7 @@ class MetaCluster():
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(20):
+        for epoch_ind in range(100):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
