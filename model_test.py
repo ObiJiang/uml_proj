@@ -192,7 +192,7 @@ class MetaCluster():
         loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
 
-        offset = tf.argmax(tf.concat([miss_rate_0,miss_rate_1],axis=1),axis=1)
+        offset = tf.argmin(tf.concat([miss_rate_0,miss_rate_1],axis=1),axis=1)
 
         return AttrDict(locals())
 
@@ -212,7 +212,6 @@ class MetaCluster():
         offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
         sess.run(model.clear_state_op)
         test_labels = (labels + np.expand_dims(offset,axis=1))%2
-
         for epoch_ind in range(100):
             states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:test_labels})
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
