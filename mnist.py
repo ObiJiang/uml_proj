@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
 class Generator_minst(object):
@@ -55,3 +56,11 @@ class Generator_minst(object):
 
 if __name__ == '__main__':
     generator = Generator_minst(2)
+    data, labels = generator.generate(50)
+    id0 = np.where(labels == 0)[0]
+    id1 = np.where(labels == 1)[0]
+    
+    plt.figure()
+    plt.scatter(data[id0, 0], data[id0, 1], c='r')
+    plt.scatter(data[id1, 0], data[id1, 1], c='b')
+    plt.show()
