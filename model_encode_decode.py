@@ -34,8 +34,35 @@ class MetaCluster():
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
+    # def create_dataset(self):
+    #     labels = np.arange(self.num_sequence)%2
+    #     np.random.shuffle(labels)
+    #
+    #     data = np.zeros((self.num_sequence,self.fea))
+    #
+    #     mean = np.random.rand(self.k, self.fea)*2-1
+    #
+    #     #cov = np.identity(self.fea)*0.1
+    #     cov = np.random.normal(size=(self.fea,self.fea))
+    #     cov = cov.T @ cov
+    #
+    #     data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
+    #
+    #     cov = np.random.normal(size=(self.fea,self.fea))
+    #     cov = cov.T @ cov
+    #
+    #     data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
+    #
+    #
+    #     if self.config.show_graph:
+    #         plt.scatter(data[labels==1,0], data[labels==1,1])
+    #         plt.scatter(data[labels==0,0], data[labels==0,1])
+    #         plt.show()
+    #
+    #     return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
+
     def create_dataset(self):
-        labels = np.arange(self.num_sequence)%2
+        labels = np.arange(self.num_sequence)%self.k
         np.random.shuffle(labels)
 
         data = np.zeros((self.num_sequence,self.fea))
@@ -43,18 +70,21 @@ class MetaCluster():
         mean = np.random.rand(self.k, self.fea)*2-1
 
         #cov = np.identity(self.fea)*0.1
-        cov = np.random.normal(size=(self.fea,self.fea))
-        cov = cov.T @ cov
 
-        data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
-        data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
+        sort_ind = np.argsort(mean[:,0])
+
+        for label_ind,ind in enumerate(sort_ind):
+            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*100)
+            cov = cov.T @ cov
+            data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
-            plt.scatter(data[labels==1,0], data[labels==1,1])
-            plt.scatter(data[labels==0,0], data[labels==0,1])
+            for i in range(self.k):
+                plt.scatter(data[labels==i,0], data[labels==i,1])
+                print(i)
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
-
+        
     def sampling_rnn(self, cell, initial_state, input_, seq_lengths):
 
         # raw_rnn expects time major inputs as TensorArrays
@@ -148,28 +178,26 @@ class MetaCluster():
                         tf.Variable(s_h,trainable=False))
                     )
 
-        cell_init_state = tuple(state_variables)
+                cell_init_state = tuple(state_variables)
+
+
+        """ Save init states (zeros) """
+        with tf.variable_scope('Decode Hidden_states'):
+            state_variables = []
+            for s_c, s_h in decode_cells.zero_state(self.batch_size,tf.float32):
+                state_variables.append(
+                        tf.nn.rnn_cell.LSTMStateTuple(
+                        tf.Variable(s_c,trainable=False),
+                        tf.Variable(s_h,trainable=False))
+                    )
+
+                decode_cell_init_state = tuple(state_variables)
 
         """ Define LSTM network """
         with tf.variable_scope('core'):
             output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
             #output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
             #output, states = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(cell, sequences, dtype=tf.float32, initial_states_fw = cell_init_state)
-
-        """ Keep and Clear Op """
-        # keep state op
-        update_ops = []
-        for state_variables, state in zip(cell_init_state, states):
-            update_ops.extend([ state_variables[0].assign(state[0]),
-                                state_variables[1].assign(state[1])])
-        keep_state_op = tf.tuple(update_ops)
-
-        # clear state op
-        update_ops = []
-        for state_variables, state in zip(cell_init_state, states):
-            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0])),
-                                state_variables[1].assign(tf.zeros_like(state[1]))])
-        clear_state_op = tf.tuple(update_ops)
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
@@ -180,10 +208,35 @@ class MetaCluster():
             #policy = output
         with tf.variable_scope('core'):
             with tf.variable_scope('decoder'):
-                decode_output, decode_states = tf.nn.dynamic_rnn(decode_cell, attended_output, dtype=tf.float32)
+                decode_output, decode_states = tf.nn.dynamic_rnn(decode_cell, attended_output, dtype=tf.float32,initial_state = decode_cell_init_state)
 
         with tf.variable_scope('core'):
             policy = tf.layers.dense(decode_output,self.k)
+
+        """ Keep and Clear Op """
+        # keep state op
+        update_ops = []
+        for state_variables, state in zip(cell_init_state, states):
+            update_ops.extend([ state_variables[0].assign(state[0]),
+                                state_variables[1].assign(state[1])])
+
+        for state_variables, state in zip(decode_cell_init_state, decode_states):
+            update_ops.extend([ state_variables[0].assign(state[0]),
+                                state_variables[1].assign(state[1])])
+
+        keep_state_op = tf.tuple(update_ops)
+
+        # clear state op
+        update_ops = []
+        for state_variables, state in zip(cell_init_state, states):
+            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0])),
+                                state_variables[1].assign(tf.zeros_like(state[1]))])
+        for state_variables, state in zip(decode_cell_init_state, decode_states):
+            update_ops.extend([ state_variables[0].assign(tf.zeros_like(state[0])),
+                                state_variables[1].assign(tf.zeros_like(state[1]))])
+        clear_state_op = tf.tuple(update_ops)
+
+
 
         """ Define Loss and Optimizer """
         # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
@@ -214,7 +267,7 @@ class MetaCluster():
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(20):
+        for epoch_ind in range(30):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
@@ -222,7 +275,7 @@ class MetaCluster():
     def test(self,data,labels,sess,validation=False):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
+        for epoch_ind in range(30):
             states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
             if not validation:
                 print("Epochs{}:{}".format(epoch_ind,miss_rate))
