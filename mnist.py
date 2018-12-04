@@ -51,7 +51,7 @@ class Generator_minst(object):
         x_test2 = np.concatenate((x_test_first, x_test_second), axis=0)
         y_test2 = np.array([0]*len(x_test_first)+[1]*len(x_test_second), dtype=np.float32)
 
-        return (x_train2[idx], y_train2[idx]), (x_test2, y_test2)
+        return x_train2[idx], y_train2[idx]
 
 if __name__ == '__main__':
-    generator = Generator_minst()
+    generator = Generator_minst(2)
