@@ -184,7 +184,7 @@ class MetaCluster():
         """ Save init states (zeros) """
         with tf.variable_scope('Decode_Hidden_states'):
             state_variables = []
-            for s_c, s_h in decode_cells.zero_state(self.batch_size,tf.float32):
+            for s_c, s_h in decode_cell.zero_state(self.batch_size,tf.float32):
                 state_variables.append(
                         tf.nn.rnn_cell.LSTMStateTuple(
                         tf.Variable(s_c,trainable=False),
