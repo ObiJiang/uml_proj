@@ -179,7 +179,8 @@ class MetaCluster():
             #policy = tf.layers.dense(output,self.k)
             #policy = output
         with tf.variable_scope('core'):
-            decode_output, decode_states = tf.nn.dynamic_rnn(decode_cell, attended_output, dtype=tf.float32)
+            with tf.variable_scope('decoder'):
+                decode_output, decode_states = tf.nn.dynamic_rnn(decode_cell, attended_output, dtype=tf.float32)
 
         with tf.variable_scope('core'):
             policy = tf.layers.dense(decode_output,self.k)
