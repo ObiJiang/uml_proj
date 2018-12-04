@@ -140,13 +140,13 @@ class MetaCluster():
 
         miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
 
-        l2 = 0.0005 * sum(
+        l2 = 0.001 * sum(
             tf.nn.l2_loss(tf_var)
                 for tf_var in tf.trainable_variables()
                 if ("core" in tf_var.name)
         )
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss+l2)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
