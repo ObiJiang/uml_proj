@@ -136,7 +136,7 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32]]
+        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32,self.k]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
@@ -177,8 +177,8 @@ class MetaCluster():
             # atten_weights = tf.matmul(output,output,transpose_b=True)
             # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
             # policy = tf.layers.dense(attended_output,self.k)
-            policy = tf.layers.dense(output,self.k)
-            #policy = output
+            # policy = tf.layers.dense(output,self.k)
+            policy = output
 
         """ Define Loss and Optimizer """
 
