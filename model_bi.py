@@ -22,8 +22,8 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.lr = 0.01
-        self.fea = 2
+        self.lr = 0.001
+        self.fea = 200
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -56,11 +56,11 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        fw_cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
+        fw_cells = [tf.contrib.rnn.BasicLSTMCell(n_unints) for n_unints in [256,128,32]]
         fw_cell = tf.contrib.rnn.MultiRNNCell(fw_cells)
 
 
-        bw_cells = [tf.contrib.rnn.BasicLSTMCell(32) for _ in range(2)]
+        bw_cells = [tf.contrib.rnn.BasicLSTMCell(n_unints) for n_unints in [256,128,32]]
         bw_cell = tf.contrib.rnn.MultiRNNCell(bw_cells)
 
         """ Save init states (zeros) """
@@ -207,18 +207,18 @@ if __name__ == '__main__':
                 labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
 
-                # if train_ind % 10 == 0:
-                #     print('-----validation-----')
-                #     # validation
-                #     data_list = []
-                #     labels_list = []
-                #     for _ in range(config.batch_size):
-                #         data_one, labels_one = metaCluster.create_dataset()
-                #         data_list.append(data_one)
-                #         labels_list.append(labels_one)
-                #     data = np.concatenate(data_list)
-                #     labels = np.concatenate(labels_list)
-                #     metaCluster.test(data,labels,sess,validation=True)
+                if train_ind % 10 == 0:
+                    print('-----validation-----')
+                    # validation
+                    data_list = []
+                    labels_list = []
+                    for _ in range(config.batch_size):
+                        data_one, labels_one = metaCluster.create_dataset()
+                        data_list.append(data_one)
+                        labels_list.append(labels_one)
+                    data = np.concatenate(data_list)
+                    labels = np.concatenate(labels_list)
+                    metaCluster.test(data,labels,sess,validation=True)
 
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
