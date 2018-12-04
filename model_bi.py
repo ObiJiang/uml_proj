@@ -29,21 +29,19 @@ class MetaCluster():
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        xcenters = sample_floats(-1,1,2)
-        ycenters = sample_floats(-1,1,2)
-
-        #labels = np.random.randint(2, size=self.num_sequence)
         labels = np.arange(self.num_sequence)%2
         np.random.shuffle(labels)
 
-        data = np.zeros((self.num_sequence,2))
+        data = np.zeros((self.num_sequence,self.fea))
 
-        mean = (xcenters[0],ycenters[0])
-        cov = [[0.01, 0], [0, 0.01]]
-        data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
+        mean = np.random.rand(self.k, self.fea)*2-1
 
-        mean = (xcenters[1],ycenters[1])
-        data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
+        #cov = np.identity(self.fea)*0.1
+        cov = np.random.normal(size=(self.fea,self.fea))
+        cov = cov.T @ cov
+
+        data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
+        data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
         if self.config.show_graph:
             plt.scatter(data[labels==1,0], data[labels==1,1])
             plt.scatter(data[labels==0,0], data[labels==0,1])
@@ -51,77 +49,6 @@ class MetaCluster():
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
-    # def sampling_rnn(self, cell, initial_state, input_, seq_lengths):
-    #
-    #     # raw_rnn expects time major inputs as TensorArrays
-    #     max_time = 100  # this is the max time step per batch
-    #     inputs_ta = tf.TensorArray(dtype=tf.float32, size=max_time, clear_after_read=False)
-    #     inputs_ta = inputs_ta.unstack(_transpose_batch_time(input_))  # model_input is the input placeholder
-    #     input_dim = input_.get_shape()[-1].value  # the dimensionality of the input to each time step
-    #     output_dim = 32  # the dimensionality of the model's output at each time step
-    #
-    #         def loop_fn(time, cell_output, cell_state, loop_state):
-    #             """
-    #             Loop function that allows to control input to the rnn cell and manipulate cell outputs.
-    #             :param time: current time step
-    #             :param cell_output: output from previous time step or None if time == 0
-    #             :param cell_state: cell state from previous time step
-    #             :param loop_state: custom loop state to share information between different iterations of this loop fn
-    #             :return: tuple consisting of
-    #               elements_finished: tensor of size [bach_size] which is True for sequences that have reached their end,
-    #                 needed because of variable sequence size
-    #               next_input: input to next time step
-    #               next_cell_state: cell state forwarded to next time step
-    #               emit_output: The first return argument of raw_rnn. This is not necessarily the output of the RNN cell,
-    #                 but could e.g. be the output of a dense layer attached to the rnn layer.
-    #               next_loop_state: loop state forwarded to the next time step
-    #             """
-    #             if cell_output is None:
-    #                 # time == 0, used for initialization before first call to cell
-    #                 next_cell_state = initial_state
-    #                 # the emit_output in this case tells TF how future emits look
-    #                 emit_output = tf.zeros([output_dim])
-    #             else:
-    #                 # t > 0, called right after call to cell, i.e. cell_output is the output from time t-1.
-    #                 # here you can do whatever ou want with cell_output before assigning it to emit_output.
-    #                 # In this case, we don't do anything
-    #                 next_cell_state = cell_state
-    #                 emit_output = cell_output
-    #
-    #             # check which elements are finished
-    #             elements_finished = (time >= seq_lengths)
-    #             finished = tf.reduce_all(elements_finished)
-    #
-    #             # assemble cell input for upcoming time step
-    #             current_output = emit_output if cell_output is not None else None
-    #             input_original = inputs_ta.read(time)  # tensor of shape (None, input_dim)
-    #
-    #             if current_output is None:
-    #                 # this is the initial step, i.e. there is no output from a previous time step, what we feed here
-    #                 # can highly depend on the data. In this case we just assign the actual input in the first time step.
-    #                 next_in = tf.concat([input_original, tf.zeros([output_dim])],axis=0)
-    #             else:
-    #                 # time > 0, so just use previous output as next input
-    #                 # here you could do fancier things, whatever you want to do before passing the data into the rnn cell
-    #                 # if here you were to pass input_original than you would get the normal behaviour of dynamic_rnn
-    #                 next_in = tf.concat([input_original,current_output],axis=0)
-    #
-    #             next_input = tf.cond(finished,
-    #                                  lambda: tf.zeros([self.batch_size, input_dim], dtype=tf.float32),  # copy through zeros
-    #                                  lambda: next_in)  # if not finished, feed the previous output as next input
-    #
-    #             # set shape manually, otherwise it is not defined for the last dimensions
-    #             next_input.set_shape([None, input_dim])
-    #
-    #             # loop state not used in this example
-    #             next_loop_state = None
-    #             return (elements_finished, next_input, next_cell_state, emit_output, next_loop_state)
-    #
-    #     outputs_ta, last_state, _ = tf.nn.raw_rnn(cell, loop_fn)
-    #     outputs = _transpose_batch_time(outputs_ta.stack())
-    #     final_state = last_state
-    #
-    #     return outputs, final_state
 
     def model(self):
         sequences = tf.placeholder(tf.float32, [self.batch_size,None, 2])
@@ -199,18 +126,26 @@ class MetaCluster():
             #policy = tf.layers.dense(tf.nn.relu(tf.layers.dense(output_stack,16)),self.k)
 
         """ Define Loss and Optimizer """
-        loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
-                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
+                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
 
-        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
-        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
+        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
 
-        miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
+        loss = tf.reduce_mean(loss_batch)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss[0])
+        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
+        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
+
+        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
+
+        l2 = 0.0005 * sum(
+            tf.nn.l2_loss(tf_var)
+                for tf_var in tf.trainable_variables()
+                if ("core" in tf_var.name)
+        )
+
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
@@ -271,18 +206,18 @@ if __name__ == '__main__':
                 labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
 
-                if train_ind % 10 == 0:
-                    print('-----validation-----')
-                    # validation
-                    data_list = []
-                    labels_list = []
-                    for _ in range(config.batch_size):
-                        data_one, labels_one = metaCluster.create_dataset()
-                        data_list.append(data_one)
-                        labels_list.append(labels_one)
-                    data = np.concatenate(data_list)
-                    labels = np.concatenate(labels_list)
-                    metaCluster.test(data,labels,sess,validation=True)
+                # if train_ind % 10 == 0:
+                #     print('-----validation-----')
+                #     # validation
+                #     data_list = []
+                #     labels_list = []
+                #     for _ in range(config.batch_size):
+                #         data_one, labels_one = metaCluster.create_dataset()
+                #         data_list.append(data_one)
+                #         labels_list.append(labels_one)
+                #     data = np.concatenate(data_list)
+                #     labels = np.concatenate(labels_list)
+                #     metaCluster.test(data,labels,sess,validation=True)
 
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
