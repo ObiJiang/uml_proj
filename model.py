@@ -29,7 +29,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 5
+        self.fea = 10
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -44,9 +44,9 @@ class MetaCluster():
 
         mean = np.random.rand(self.k, self.fea)*2-1
 
-        #cov = np.identity(self.fea)*0.1
         cov = np.random.normal(size=(self.fea,self.fea))
         cov = cov.T @ cov
+        cov += np.identity(self.fea)*0.1
 
         data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
         data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
