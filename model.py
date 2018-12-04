@@ -252,7 +252,7 @@ if __name__ == '__main__':
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             # training
-            for _ in tqdm(range(int(config.training_exp_num))):
+            for train_ind in tqdm(range(int(config.training_exp_num))):
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
