@@ -306,8 +306,10 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            generator = Generator_minst(2)
-            data, labels = generator.generate(50)
+            generator = Generator_minst(metaCluster.fea)
+            data, labels = generator.generate(metaCluster.num_sequence/2)
+            data = np.expand_dims(data, axis=0)
+            labels = np.expand_dims(labels, axis=0)
             #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
 
