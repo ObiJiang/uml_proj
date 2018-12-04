@@ -23,6 +23,7 @@ class MetaCluster():
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
+        self.fea = 2
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -51,7 +52,7 @@ class MetaCluster():
 
 
     def model(self):
-        sequences = tf.placeholder(tf.float32, [self.batch_size,None, 2])
+        sequences = tf.placeholder(tf.float32, [self.batch_size,None, self.fea])
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
