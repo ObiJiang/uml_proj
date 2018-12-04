@@ -72,11 +72,12 @@ class MetaCluster():
             cov_factor = np.random.rand(1)*50+10
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
+            print(np.max(cov))
+            print(np.min(cov))
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
-                print(i)
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
@@ -225,6 +226,7 @@ class MetaCluster():
                 if ("core" in tf_var.name)
         )
 
+        predicted_label = tf.argmax(policy,axis=2)
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         return AttrDict(locals())
 
@@ -240,11 +242,38 @@ class MetaCluster():
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
-            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
+            states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             if not validation:
                 print("Epochs{}:{}".format(epoch_ind,miss_rate))
         if validation:
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
+        if config.show_comparison_graph:
+            data = np.squeeze(data)
+            labels = np.squeeze(labels)
+            predicted_label = np.squeeze(predicted_label)
+            diff = np.abs(labels-predicted_label)
+
+            fig = plt.figure()
+            ax = fig.add_subplot(311)
+
+            for i in range(self.k):
+                ax.scatter(data[labels==i,0], data[labels==i,1])
+            ax.set_title('Original',fontsize=8)
+            #ax.axis('scaled')
+
+            ax = fig.add_subplot(312)
+            for i in range(self.k):
+                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+            ax.set_title('Predicton',fontsize=8)
+            #ax.axis('scaled')
+
+            ax = fig.add_subplot(313)
+            ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
+            ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
+            ax.set_title('Difference',fontsize=8)
+            #ax.axis('scaled')
+
+            plt.show()
 
 
     def save_model(self, sess, epoch):
@@ -265,6 +294,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--test', default=False, action='store_true')
     parser.add_argument('--show_graph', default=False, action='store_true')
+    parser.add_argument('--show_comparison_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=2, type=int)
