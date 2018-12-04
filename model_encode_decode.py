@@ -84,7 +84,7 @@ class MetaCluster():
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
-        
+
     def sampling_rnn(self, cell, initial_state, input_, seq_lengths):
 
         # raw_rnn expects time major inputs as TensorArrays
@@ -182,7 +182,7 @@ class MetaCluster():
 
 
         """ Save init states (zeros) """
-        with tf.variable_scope('Decode Hidden_states'):
+        with tf.variable_scope('Decode_Hidden_states'):
             state_variables = []
             for s_c, s_h in decode_cells.zero_state(self.batch_size,tf.float32):
                 state_variables.append(
