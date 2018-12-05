@@ -205,7 +205,7 @@ if __name__ == '__main__':
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             # training
-            for _ in tqdm(range(config.training_exp_num)):
+            for train_ind in tqdm(range(config.training_exp_num)):
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
@@ -215,6 +215,19 @@ if __name__ == '__main__':
                 data = np.concatenate(data_list)
                 labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
+
+                if train_ind % 10 == 0:
+                    print('-----validation-----')
+                    # validation
+                    data_list = []
+                    labels_list = []
+                    for _ in range(config.batch_size):
+                        data_one, labels_one = metaCluster.create_dataset()
+                        data_list.append(data_one)
+                        labels_list.append(labels_one)
+                    data = np.concatenate(data_list)
+                    labels = np.concatenate(labels_list)
+                    metaCluster.test(data,labels,sess,validation=True)
 
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
