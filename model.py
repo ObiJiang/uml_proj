@@ -73,7 +73,6 @@ class MetaCluster():
             # cov = cov.T @ cov
             s = np.random.uniform(0.1,0.01,self.fea)
             cov = np.diag(s)
-            print(cov)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
             for i in range(self.k):
