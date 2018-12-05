@@ -263,7 +263,7 @@ class MetaCluster():
                 if ("core" in tf_var.name)
         )
 
-        opt = tf.train.Ad amOptimizer(learning_rate=self.lr).minimize(loss+l2)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss+l2)
         # optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         # gvs = optimizer.compute_gradients(loss)
         # capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
