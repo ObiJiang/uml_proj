@@ -23,30 +23,29 @@ class MetaCluster():
         self.k = 2
         self.num_sequence = 100
         self.lr = 0.01
+        self.fea = 2
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        xcenters = sample_floats(-1,1,2)
-        ycenters = sample_floats(-1,1,2)
-
-        #labels = np.random.randint(2, size=self.num_sequence)
-        labels = np.arange(self.num_sequence)%2
+        labels = np.arange(self.num_sequence)%self.k
         np.random.shuffle(labels)
 
-        data = np.zeros((self.num_sequence,2))
+        data = np.zeros((self.num_sequence,self.fea))
 
-        mean = (xcenters[0],ycenters[0])
-        cov = [[0.01, 0], [0, 0.01]]
-        data[labels==1,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==1)))
+        mean = np.random.rand(self.k, self.fea)*2-1
 
-        mean = (xcenters[1],ycenters[1])
-        data[labels==0,:] = np.random.multivariate_normal(mean, cov, (np.sum(labels==0)))
+        sort_ind = np.argsort(mean[:,0])
+
+        for label_ind,ind in enumerate(sort_ind):
+            s = np.random.uniform(0.1,0.01,self.fea)
+            cov = np.diag(s)
+            data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
-            plt.scatter(data[labels==1,0], data[labels==1,1])
-            plt.scatter(data[labels==0,0], data[labels==0,1])
+            for i in range(self.k):
+                plt.scatter(data[labels==i,0], data[labels==i,1])
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
@@ -145,31 +144,34 @@ class MetaCluster():
             policy = tf.layers.dense(output,self.k)
 
         """ Define Loss and Optimizer """
-        loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
-                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
+                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
 
-        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
-        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32))/(self.num_sequence*self.batch_size)
-        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32))/(self.num_sequence*self.batch_size)
+        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
 
-        miss_rate = tf.minimum(miss_rate_0,miss_rate_1)
+        loss = tf.reduce_mean(loss_batch)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(tf.minimum(loss[0],loss[1]))
+        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
+        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
+
+        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
+
+        predicted_label = tf.argmax(policy,axis=2)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
+        for epoch_ind in range(30):
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
+        for epoch_ind in range(30):
             _,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
