@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
+from mnist import Generator_minst
 
 # attention + bi-directional
 # maml
@@ -28,7 +29,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 2
+        self.fea = 10
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -293,8 +294,8 @@ if __name__ == '__main__':
     parser.add_argument('--show_comparison_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
-    parser.add_argument('--batch_size', default=2, type=int)
-    parser.add_argument('--training_exp_num', default=1000, type=int)
+    parser.add_argument('--batch_size', default=100, type=int)
+    parser.add_argument('--training_exp_num', default=100, type=int)
 
     config = parser.parse_args()
 
@@ -356,7 +357,11 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            data, labels = metaCluster.create_dataset()
+            generator = Generator_minst(metaCluster.fea)
+            data, labels = generator.generate(metaCluster.num_sequence//2)
+            data = np.expand_dims(data, axis=0)
+            labels = np.expand_dims(labels, axis=0)
+            #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
 
             # labels = (labels+1)%2
