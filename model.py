@@ -29,7 +29,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 2
+        self.fea = 5
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -295,7 +295,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=100, type=int)
-    parser.add_argument('--training_exp_num', default=100, type=int)
+    parser.add_argument('--training_exp_num', default=50, type=int)
 
     config = parser.parse_args()
 
