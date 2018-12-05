@@ -168,12 +168,42 @@ class MetaCluster():
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
-    def test(self,data,labels,sess):
+    def test(self,data,labels,sess,validation=False):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(30):
             _,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:labels})
+            if not validation:
+                print("Epochs{}:{}".format(epoch_ind,miss_rate))
+        if validation:
             print("Epochs{}:{}".format(epoch_ind,miss_rate))
+        if config.show_comparison_graph:
+            data = np.squeeze(data)
+            labels = np.squeeze(labels)
+            predicted_label = np.squeeze(predicted_label)
+            diff = np.abs(labels-predicted_label)
+
+            fig = plt.figure()
+            ax = fig.add_subplot(311)
+
+            for i in range(self.k):
+                ax.scatter(data[labels==i,0], data[labels==i,1])
+            ax.set_title('Original',fontsize=8)
+            #ax.axis('scaled')
+
+            ax = fig.add_subplot(312)
+            for i in range(self.k):
+                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+            ax.set_title('Predicton',fontsize=8)
+            #ax.axis('scaled')
+
+            ax = fig.add_subplot(313)
+            ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
+            ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
+            ax.set_title('Difference',fontsize=8)
+            #ax.axis('scaled')
+
+            plt.show()
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -193,6 +223,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--test', default=False, action='store_true')
     parser.add_argument('--show_graph', default=False, action='store_true')
+    parser.add_argument('--show_comparison_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=2, type=int)
