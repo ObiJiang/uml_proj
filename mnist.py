@@ -45,7 +45,7 @@ class Generator_minst(object):
         idx = np.arange(size*2)
         np.random.shuffle(idx)
 
-        pca = PCA(n_components=fea)
+        pca = PCA(n_components=fea, whiten=True)
         x_train_pca = pca.fit_transform(x_train2)
         print(np.sum(pca.explained_variance_ratio_))
 
