@@ -15,6 +15,7 @@ from mnist import Generator_minst
 # reptile + ntm
 # just 5 iterations
 # also try 10 clusters
+# try agent and rl update rule
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -365,6 +366,3 @@ if __name__ == '__main__':
             labels = np.expand_dims(labels, axis=0)
             #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
-
-            # labels = (labels+1)%2
-            # metaCluster.test(data,labels,sess)

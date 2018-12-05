@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
+from mnist import Generator_minst
 
 # attention + bi-directional
 # maml
@@ -27,7 +28,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 200
+        self.fea = 10
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -262,7 +263,11 @@ class MetaCluster():
                 if ("core" in tf_var.name)
         )
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        #opt = tf.train.Ad amOptimizer(learning_rate=self.lr).minimize(loss)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+        gvs = optimizer.compute_gradients(loss)
+        capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+        opt = optimizer.apply_gradients(capped_gvs)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
@@ -367,8 +372,9 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            data, labels = metaCluster.create_dataset()
+            generator = Generator_minst(metaCluster.fea)
+            data, labels = generator.generate(metaCluster.num_sequence//2)
+            data = np.expand_dims(data, axis=0)
+            labels = np.expand_dims(labels, axis=0)
+            #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
-
-            # labels = (labels+1)%2
-            # metaCluster.test(data,labels,sess)
