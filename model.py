@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
+from edu import eduGenerate     # seq=100 fea=5
 from mnist import Generator_minst
 
 # attention + bi-directional
@@ -29,7 +30,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 10
+        self.fea = 5
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -359,6 +360,7 @@ if __name__ == '__main__':
 
             generator = Generator_minst()
             data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+            data, labels = eduGenerate()
             data = np.expand_dims(data, axis=0)
             labels = np.expand_dims(labels, axis=0)
             #data, labels = metaCluster.create_dataset()
