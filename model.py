@@ -32,6 +32,7 @@ class MetaCluster():
         self.num_sequence = 100
         self.fea = 10
         self.lr = 0.003
+        self.keep_prob = 0.8
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -159,7 +160,8 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32,2]]
+        cells = [
+tf.nn.rnn_cell.DropoutWrapper(tf.contrib.rnn.BasicLSTMCell(n_unint),input_keep_prob=self.keep_prob, output_keep_prob=self.keep_prob) for n_unint in [32,32,2]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
