@@ -3,7 +3,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
-def eduGenerate(fea=None, size=50):
+def eduGenerate(fea=5, size=50):
     eduH = parse('edu-high.txt')
     eduL = parse('edu-low.txt')
     idH = np.arange(eduH.shape[0])
@@ -16,7 +16,7 @@ def eduGenerate(fea=None, size=50):
     idx = np.arange(size*2)
     np.random.shuffle(idx)
 
-    if fea is not None:
+    if fea<5:
         pca = PCA(n_components=fea, whiten=True)
         x_train = pca.fit_transform(x_train)
         print(np.sum(pca.explained_variance_ratio_))
