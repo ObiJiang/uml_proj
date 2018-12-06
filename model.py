@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
+from sklearn.datasets import make_circles
 from sklearn.datasets import make_moons
 from sklearn.cluster import KMeans
 from edu import eduGenerate     # seq=100 fea=5
@@ -365,7 +366,8 @@ if __name__ == '__main__':
 
             # data, labels = eduGenerate()
 
-            data, labels = make_moons(100)
+            data, labels = make_circles(100)
+            #data, labels = make_moons(100)
             kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
             print(np.sum(np.abs(labels-kmeans.labels_)))
 
