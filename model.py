@@ -229,7 +229,7 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss+l2)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
@@ -237,8 +237,8 @@ class MetaCluster():
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
             perm = np.random.permutation(self.num_sequence)
-            data = data[perm:,]
-            labels = labels[perm:,]
+            data = data[:,perm,:]
+            labels = labels[:,perm]
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
@@ -248,8 +248,8 @@ class MetaCluster():
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
             perm = np.random.permutation(self.num_sequence)
-            data = data[perm:,]
-            labels = labels[perm:,]
+            data = data[:,perm,:]
+            labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             if not validation:
                 print("Epochs{}:{}".format(epoch_ind,miss_rate))
