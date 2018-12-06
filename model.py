@@ -31,7 +31,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 5
+        self.fea = 2
         self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
