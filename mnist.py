@@ -29,7 +29,7 @@ class Generator_minst(object):
         second = np.random.randint(10)
         while first == second:
             second = np.random.randint(10)
-        
+
         x_train_first = self.x_train10[first]
         x_train_second = self.x_train10[second]
         x_test_first = self.x_test10[first]
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     data, labels = generator.generate(50, 2)
     id0 = np.where(labels == 0)[0]
     id1 = np.where(labels == 1)[0]
-    
+
     # plt.figure()
     # plt.scatter(data[id0, 0], data[id0, 1], c='r')
     # plt.scatter(data[id1, 0], data[id1, 1], c='b')
