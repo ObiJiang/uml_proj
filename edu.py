@@ -16,9 +16,10 @@ def eduGenerate(fea=5, size=50):
     idx = np.arange(size*2)
     np.random.shuffle(idx)
 
-    pca = PCA(n_components=fea, whiten=True)
-    x_train = pca.fit_transform(x_train)
-    print(np.sum(pca.explained_variance_ratio_))
+    if fea<5:
+        pca = PCA(n_components=fea, whiten=True)
+        x_train = pca.fit_transform(x_train)
+        print(np.sum(pca.explained_variance_ratio_))
 
     return x_train[idx], y_train[idx]
 
