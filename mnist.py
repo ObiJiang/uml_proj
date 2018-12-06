@@ -25,10 +25,10 @@ class Generator_minst(object):
             self.x_test10[i] = x_test_f[idx_test[i][0], :]
 
     def generate(self, size=100, fea=200):
-        first = np.random.randint(10)
-        second = np.random.randint(10)
-        while first == second:
-            second = np.random.randint(10)
+        pool1 = [6, 0, 2, 3, 8]
+        pool2 = [4, 9, 7, 1]
+        first = pool1[np.random.randint(len(pool1))]
+        second = pool2[np.random.randint(len(pool2))]
         
         x_train_first = self.x_train10[first]
         x_train_second = self.x_train10[second]
