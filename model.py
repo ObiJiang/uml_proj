@@ -17,6 +17,7 @@ from mnist import Generator_minst
 # also try 10 clusters
 # try agent and rl update rule
 # shuffle
+# mimic k-means loss
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -214,7 +215,7 @@ class MetaCluster():
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
+        for epoch_ind in range(30):
             perm = np.random.permutation(self.num_sequence)
             data = data[:,perm,:]
             labels = labels[:,perm]
@@ -225,7 +226,7 @@ class MetaCluster():
     def test(self,data,labels,sess,validation=False):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(100):
+        for epoch_ind in range(30):
             perm = np.random.permutation(self.num_sequence)
             data = data[:,perm,:]
             labels = labels[:,perm]
