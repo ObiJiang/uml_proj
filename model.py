@@ -364,9 +364,9 @@ if __name__ == '__main__':
             # generator = Generator_minst()
             # data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
-            # data, labels = eduGenerate()
+            data, labels = eduGenerate(fea=2)
 
-            data, labels = make_circles(100)
+            #data, labels = make_circles(100)
             #data, labels = make_moons(100)
             kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
             print(np.sum(np.abs(labels-kmeans.labels_)))
