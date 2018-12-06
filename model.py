@@ -19,6 +19,8 @@ from mnist import Generator_minst
 # reptile + ntm
 # just 5 iterations
 # also try 10 clusters
+# try agent and rl update rule
+# shuffle
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -35,6 +37,7 @@ class MetaCluster():
         self.num_sequence = 100
         self.fea = 2
         self.lr = 0.003
+        self.keep_prob = 0.8
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -72,9 +75,11 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*50+10
-            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
-            cov = cov.T @ cov
+            # cov_factor = np.random.rand(1)*50+10
+            # cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
+            # cov = cov.T @ cov
+            s = np.random.uniform(0.1,0.01,self.fea)
+            cov = np.diag(s)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
             for i in range(self.k):
@@ -228,13 +233,16 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss+l2)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
+            perm = np.random.permutation(self.num_sequence)
+            data = data[:,perm,:]
+            labels = labels[:,perm]
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
@@ -243,6 +251,9 @@ class MetaCluster():
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
+            perm = np.random.permutation(self.num_sequence)
+            data = data[:,perm,:]
+            labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             if not validation:
                 print("Epochs{}:{}".format(epoch_ind,miss_rate))
@@ -375,6 +386,3 @@ if __name__ == '__main__':
             labels = np.expand_dims(labels, axis=0)
             #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
-
-            # labels = (labels+1)%2
-            # metaCluster.test(data,labels,sess)
