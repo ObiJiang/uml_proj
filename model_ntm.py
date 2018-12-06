@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from NeuralTuringMachine.ntm import NTMCell,NTMControllerState
+from mnist import Generator_minst
 
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
@@ -22,7 +23,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.lr = 0.01
+        self.lr = 0.001
         self.fea = 2
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -290,8 +291,9 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            data, labels = metaCluster.create_dataset()
+            generator = Generator_minst(metaCluster.fea)
+            data, labels = generator.generate(metaCluster.num_sequence//2)
+            data = np.expand_dims(data, axis=0)
+            labels = np.expand_dims(labels, axis=0)
+            #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
-
-            # labels = (labels+1)%2
-            # metaCluster.test(data,labels,sess)
