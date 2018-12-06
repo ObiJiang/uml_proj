@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
+from sklearn.datasets import make_moons
 from edu import eduGenerate     # seq=100 fea=5
 from mnist import Generator_minst
 
@@ -360,7 +361,11 @@ if __name__ == '__main__':
 
             generator = Generator_minst()
             data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+
             data, labels = eduGenerate()
+
+            data, labels = make_moons(100)
+
             data = np.expand_dims(data, axis=0)
             labels = np.expand_dims(labels, axis=0)
             #data, labels = metaCluster.create_dataset()
