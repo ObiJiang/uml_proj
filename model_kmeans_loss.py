@@ -8,6 +8,11 @@ import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from mnist import Generator_minst
+from sklearn.datasets import make_circles
+from sklearn.datasets import make_moons
+from sklearn.cluster import KMeans
+from edu import eduGenerate     # seq=100 fea=5
+from mnist import Generator_minst
 
 # attention + bi-directional
 # maml
