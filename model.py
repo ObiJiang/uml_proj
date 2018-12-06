@@ -31,34 +31,13 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 10
+        self.fea = config.fea
         self.lr = 0.003
         self.keep_prob = 0.8
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
-
-    # def create_dataset(self):
-    #     labels = np.arange(self.num_sequence)%2
-    #     np.random.shuffle(labels)
-    #
-    #     data = np.zeros((self.num_sequence,self.fea))
-    #
-    #     mean = np.random.rand(self.k, self.fea)*2-1
-    #
-    #     #cov = np.identity(self.fea)*0.1
-    #     cov = np.random.normal(size=(self.fea,self.fea))
-    #     cov = cov.T @ cov
-    #
-    #     data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
-    #     data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
-    #     if self.config.show_graph:
-    #         plt.scatter(data[labels==1,0], data[labels==1,1])
-    #         plt.scatter(data[labels==0,0], data[labels==0,1])
-    #         plt.show()
-    #
-    #     return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
     def create_dataset(self):
         labels = np.arange(self.num_sequence)%self.k
@@ -71,11 +50,11 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            # cov_factor = np.random.rand(1)*50+10
-            # cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
-            # cov = cov.T @ cov
-            s = np.random.uniform(0.1,0.01,self.fea)
-            cov = np.diag(s)
+            cov_factor = np.random.rand(1)*5+5
+            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
+            cov = cov.T @ cov
+            # s = np.random.uniform(0.1,0.05,self.fea)
+            # cov = np.diag(s)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
             for i in range(self.k):
@@ -90,7 +69,7 @@ class MetaCluster():
         max_time = seq_lengths+1  # this is the max time step per batch
         inputs_ta = tf.TensorArray(dtype=tf.float32, size=max_time, clear_after_read=False)
         inputs_ta = inputs_ta.unstack(_transpose_batch_time(input_))  # model_input is the input placeholder
-        output_dim = 2  # the dimensionality of the model's output at each time step
+        output_dim = self.k  # the dimensionality of the model's output at each time step
         input_dim = input_.get_shape()[-1].value +  output_dim # the dimensionality of the input to each time step
 
         def loop_fn(time, cell_output, cell_state, loop_state):
@@ -161,7 +140,7 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32,2]]
+        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,16,2]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
@@ -222,7 +201,7 @@ class MetaCluster():
 
         miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
 
-        l2 = 0.0005 * sum(
+        l2 = 0.001 * sum(
             tf.nn.l2_loss(tf_var)
                 for tf_var in tf.trainable_variables()
                 if ("core" in tf_var.name)
@@ -306,6 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=100, type=int)
+    parser.add_argument('--fea', default=2, type=int)
     parser.add_argument('--training_exp_num', default=100, type=int)
 
     config = parser.parse_args()
