@@ -16,6 +16,7 @@ from mnist import Generator_minst
 # just 5 iterations
 # also try 10 clusters
 # try agent and rl update rule
+# shuffle
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -160,8 +161,7 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [
-tf.nn.rnn_cell.DropoutWrapper(tf.contrib.rnn.BasicLSTMCell(n_unint),input_keep_prob=self.keep_prob, output_keep_prob=self.keep_prob) for n_unint in [32,32,2]]
+        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32,2]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
@@ -236,6 +236,9 @@ tf.nn.rnn_cell.DropoutWrapper(tf.contrib.rnn.BasicLSTMCell(n_unint),input_keep_p
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
+            perm = np.random.permutation(self.num_sequence)
+            data = data[perm:,]
+            labels = labels[perm:,]
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
@@ -244,6 +247,9 @@ tf.nn.rnn_cell.DropoutWrapper(tf.contrib.rnn.BasicLSTMCell(n_unint),input_keep_p
         model = self.model
         sess.run(model.clear_state_op)
         for epoch_ind in range(100):
+            perm = np.random.permutation(self.num_sequence)
+            data = data[perm:,]
+            labels = labels[perm:,]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             if not validation:
                 print("Epochs{}:{}".format(epoch_ind,miss_rate))
