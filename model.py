@@ -35,7 +35,7 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = 2
+        self.fea = 5
         self.lr = 0.003
         self.keep_prob = 0.8
         self.model = self.model()
@@ -375,7 +375,7 @@ if __name__ == '__main__':
             # generator = Generator_minst()
             # data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
-            data, labels = eduGenerate(fea=2)
+            data, labels = eduGenerate()
 
             #data, labels = make_circles(100)
             #data, labels = make_moons(100)
