@@ -56,7 +56,7 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*10+10
+            cov_factor = np.random.rand(1)*5+5
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
             # s = np.random.uniform(0.1,0.05,self.fea)
@@ -202,7 +202,7 @@ class MetaCluster():
 
         loss = tf.reduce_mean(loss_batch)
 
-        policy_prob = tf.nn.softmax(policy)
+        policy_prob = tf.reduce_max(tf.nn.softmax(policy),axis=2,keepdims=True)
 
         cluster_centers = tf.reduce_mean(tf.expand_dims(policy_prob,axis=3)*tf.expand_dims(sequences,axis=2),axis=1,keepdims=True)
         diff_to_clusters = tf.norm(tf.expand_dims(sequences,axis=2) - cluster_centers,axis=3)
