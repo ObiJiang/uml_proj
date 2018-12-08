@@ -64,7 +64,7 @@ class Generator_minst(object):
         x_test2 = np.concatenate((x_test_1, x_test_2), axis=0)
         y_test2 = np.array([0]*len(x_test_1)+[1]*len(x_test_2), dtype=np.float32)
 
-        return x_train_pca[idx]/np.max(x_train_pca), y_train2[idx]
+        return StandardScaler().fit_transform(x_train_pca[idx]), y_train2[idx]
 
 if __name__ == '__main__':
     k = 3
