@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 class Generator_minst(object):
@@ -25,8 +26,8 @@ class Generator_minst(object):
             self.x_test10[i] = x_test_f[idx_test[i][0], :]
 
     def generate(self, size=100, fea=200):
-        pool1 = [6, 0, 2, 3, 8]
-        pool2 = [4, 9, 7, 1]
+        pool1 = [6, 0, 3]
+        pool2 = [4, 7, 1, 9]
         first = pool1[np.random.randint(len(pool1))]
         second = pool2[np.random.randint(len(pool2))]
         
@@ -45,8 +46,9 @@ class Generator_minst(object):
         idx = np.arange(size*2)
         np.random.shuffle(idx)
 
+        x_norm = StandardScaler().fit_transform(x_train2)
         pca = PCA(n_components=fea, whiten=True)
-        x_train_pca = pca.fit_transform(x_train2)
+        x_train_pca = pca.fit_transform(x_norm)
         print(np.sum(pca.explained_variance_ratio_))
 
         x_test2 = np.concatenate((x_test_first, x_test_second), axis=0)
