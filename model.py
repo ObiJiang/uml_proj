@@ -55,7 +55,7 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*5+5
+            cov_factor = np.random.rand(1)*3+3
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
             # s = np.random.uniform(0.1,0.05,self.fea)
@@ -353,17 +353,17 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            # generator = Generator_minst()
-            # data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+            generator = Generator_minst()
+            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
             #data, labels = eduGenerate(metaCluster.fea)
 
             # data, labels = make_circles(100)
             # data, labels = make_moons(100)
-            # kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
-            # print(np.sum(np.abs(labels-kmeans.labels_)))
+            kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
+            print(np.sum(np.abs(labels-kmeans.labels_)))
 
-            # data = np.expand_dims(data, axis=0)
-            # labels = np.expand_dims(labels, axis=0)
-            data, labels = metaCluster.create_dataset()
+            data = np.expand_dims(data, axis=0)
+            labels = np.expand_dims(labels, axis=0)
+            #data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
