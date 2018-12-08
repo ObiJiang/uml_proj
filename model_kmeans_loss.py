@@ -13,7 +13,7 @@ from sklearn.datasets import make_moons
 from sklearn.cluster import KMeans
 from edu import eduGenerate     # seq=100 fea=5
 from mnist import Generator_minst
-
+from sklearn.metrics import normalized_mutual_info_score
 # attention + bi-directional
 # maml
 # put lstm ouput into lstm
