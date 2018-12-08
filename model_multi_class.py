@@ -363,7 +363,7 @@ if __name__ == '__main__':
             #data, labels = make_circles(100)
             #data, labels = make_moons(100)
             kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
-            print(metaCluster.mutual_info(labels,kmeans.labels_))
+            print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0))
             print(np.sum(np.abs(labels-kmeans.labels_)))
 
             data = np.expand_dims(data, axis=0)
