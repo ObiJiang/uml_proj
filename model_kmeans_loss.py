@@ -36,9 +36,9 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = 2
-        self.num_sequence = 100
+        self.num_sequence = 30
         self.fea = config.fea
-        self.lr = 0.003
+        self.lr = 0.01
         self.keep_prob = 0.8
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
@@ -202,12 +202,14 @@ class MetaCluster():
 
         loss = tf.reduce_mean(loss_batch)
 
-        policy_prob = tf.nn.softmax(policy)
+        policy_prob = tf.nn.softmax(policy,axis=2)
+        policy_prob_stricter = tf.nn.softmax(tf.square(policy_prob),axis=2)
 
         cluster_centers = tf.reduce_mean(tf.expand_dims(policy_prob,axis=3)*tf.expand_dims(sequences,axis=2),axis=1,keepdims=True)
         diff_to_clusters = tf.norm(tf.expand_dims(sequences,axis=2) - cluster_centers,axis=3)
         diff_prob_to_clusters = tf.reduce_sum(tf.reduce_sum(diff_to_clusters*policy_prob,axis=1),axis=1)
         kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/self.num_sequence
+        KL_loss = tf.reduce_sum((tf.log(policy_prob_stricter)-tf.log(policy_prob))*policy_prob)
 
         miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
         miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
@@ -221,7 +223,8 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(kmeans_loss+KL_loss)
+        #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
         return AttrDict(locals())
 
     def train(self,data,labels,sess):
@@ -233,6 +236,7 @@ class MetaCluster():
             labels = labels[:,perm]
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
+            print(miss_rate)
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess,validation=False):
