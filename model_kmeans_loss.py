@@ -14,6 +14,7 @@ from sklearn.cluster import KMeans
 from edu import eduGenerate     # seq=100 fea=5
 from mnist import Generator_minst
 from sklearn.metrics import normalized_mutual_info_score
+
 # attention + bi-directional
 # maml
 # put lstm ouput into lstm
@@ -40,7 +41,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.01
         self.keep_prob = 0.8
-        self.alpha = 0.1
+        self.alpha = 0.2
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
