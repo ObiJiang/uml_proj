@@ -353,10 +353,10 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            generator = Generator_minst()
-            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+            # generator = Generator_minst()
+            # data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
-            #data, labels = eduGenerate(metaCluster.fea)
+            data, labels = eduGenerate(metaCluster.fea)
 
             # data, labels = make_circles(100)
             # data, labels = make_moons(100)
