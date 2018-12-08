@@ -27,7 +27,7 @@ class Generator_minst(object):
 
     def generate(self, size=100, fea=200):
         pool1 = [6, 0, 3]
-        pool2 = [4, 7, 1, 9]
+        pool2 = [4, 7, 9]
         first = pool1[np.random.randint(len(pool1))]
         second = pool2[np.random.randint(len(pool2))]
         
