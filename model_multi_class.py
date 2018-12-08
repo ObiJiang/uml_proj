@@ -52,18 +52,18 @@ class MetaCluster():
 
         mean = np.random.rand(self.k, self.fea)*2-1
 
+        #cov = np.identity(self.fea)*0.1
+
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*5+5
-            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
+            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*100)
             cov = cov.T @ cov
-            # s = np.random.uniform(0.1,0.05,self.fea)
-            # cov = np.diag(s)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
+                print(i)
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
