@@ -40,6 +40,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.003
         self.keep_prob = 0.8
+        self.alpha = 0.2
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -204,14 +205,21 @@ class MetaCluster():
                 for tf_var in tf.trainable_variables()
                 if ("core" in tf_var.name)
         )
+        policy_prob = tf.nn.softmax(policy,axis=2)
+        policy_prob_stricter = tf.nn.softmax(tf.square(policy_prob),axis=2)
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        cluster_centers = tf.reduce_mean(tf.expand_dims(policy_prob,axis=3)*tf.expand_dims(sequences,axis=2),axis=1,keepdims=True)
+        diff_to_clusters = tf.norm(tf.expand_dims(sequences,axis=2) - cluster_centers,axis=3)
+        diff_prob_to_clusters = tf.reduce_sum(tf.reduce_sum(diff_to_clusters*policy_prob,axis=1),axis=1)
+        kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/self.num_sequence
+
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
         return AttrDict(locals())
 
     def mutual_info(self,true_label,predicted_label):
         nmi_list = []
         for i in range(true_label.shape[0]):
-            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i],'max')
+            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i])
             nmi_list.append(nmi)
         return np.mean(nmi_list)
 
