@@ -41,7 +41,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.01
         self.keep_prob = 0.8
-        self.alpha = 0.2
+        self.alpha = 0.05
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -58,11 +58,11 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            # cov_factor = np.random.rand(1)*5+5
-            # cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
-            # cov = cov.T @ cov
-            s = np.random.uniform(0.01,0.05,self.fea)
-            cov = np.diag(s)
+            cov_factor = np.random.rand(1)*5+5
+            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
+            cov = cov.T @ cov
+            # s = np.random.uniform(0.1,0.05,self.fea)
+            # cov = np.diag(s)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
             for i in range(self.k):
@@ -210,7 +210,7 @@ class MetaCluster():
         cluster_centers = tf.reduce_mean(tf.expand_dims(policy_prob,axis=3)*tf.expand_dims(sequences,axis=2),axis=1,keepdims=True)
         diff_to_clusters = tf.norm(tf.expand_dims(sequences,axis=2) - cluster_centers,axis=3)
         diff_prob_to_clusters = tf.reduce_sum(tf.reduce_sum(diff_to_clusters*policy_prob,axis=1),axis=1)
-        kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/self.num_sequence
+        kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/(self.num_sequence*self.fea)
         KL_loss = tf.reduce_sum((tf.log(policy_prob_stricter)-tf.log(policy_prob))*policy_prob)
 
         miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
