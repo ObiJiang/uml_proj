@@ -25,25 +25,35 @@ class Generator_minst(object):
             self.x_train10[i] = x_train_f[idx_train[i][0], :]
             self.x_test10[i] = x_test_f[idx_test[i][0], :]
 
-    def generate(self, size=100, fea=200):
-        pool1 = [6, 0, 3]
-        pool2 = [4, 7, 9]
+    def generate(self, size=100, fea=200, k=2):
+        pool1 = [4, 7, 9]
+        pool2 = [6, 0]
+        if k>2:
+            pool2.append(3)
         first = pool1[np.random.randint(len(pool1))]
         second = pool2[np.random.randint(len(pool2))]
         
-        x_train_first = self.x_train10[first]
-        x_train_second = self.x_train10[second]
-        x_test_first = self.x_test10[first]
-        x_test_second = self.x_test10[second]
+        x_train_1 = self.x_train10[first]
+        x_train_2 = self.x_train10[second]
+        x_train_3 = self.x_train10[3]
+        x_test_1 = self.x_test10[first]
+        x_test_2 = self.x_test10[second]
+        x_test_3 = self.x_test10[3]
 
-        idx_first = np.arange(len(x_train_first))
-        idx_second = np.arange(len(x_train_second))
-        np.random.shuffle(idx_first)
-        np.random.shuffle(idx_second)
+        id1 = np.arange(len(x_train_1))
+        id2 = np.arange(len(x_train_2))
+        id3 = np.arange(len(x_train_3))
+        np.random.shuffle(id1)
+        np.random.shuffle(id2)
+        np.random.shuffle(id3)
 
-        x_train2 = np.concatenate((x_train_first[idx_first[:size]], x_train_second[idx_second[:size]]), axis=0)
-        y_train2 = np.array([0]*size+[1]*size, dtype=np.float32)
-        idx = np.arange(size*2)
+        if k == 2:
+            x_train2 = np.concatenate((x_train_1[id1[:size]], x_train_2[id2[:size]]), axis=0)
+            y_train2 = np.array([0]*size+[1]*size, dtype=np.float32)
+        else:
+            x_train2 = np.concatenate((x_train_1[id1[:size]], x_train_2[id2[:size]], x_train_3[id3[:size]]), axis=0)
+            y_train2 = np.array([0]*size+[1]*size+[2]*size, dtype=np.float32)
+        idx = np.arange(size*k)
         np.random.shuffle(idx)
 
         x_norm = StandardScaler().fit_transform(x_train2)
@@ -51,18 +61,23 @@ class Generator_minst(object):
         x_train_pca = pca.fit_transform(x_norm)
         print(np.sum(pca.explained_variance_ratio_))
 
-        x_test2 = np.concatenate((x_test_first, x_test_second), axis=0)
-        y_test2 = np.array([0]*len(x_test_first)+[1]*len(x_test_second), dtype=np.float32)
+        x_test2 = np.concatenate((x_test_1, x_test_2), axis=0)
+        y_test2 = np.array([0]*len(x_test_1)+[1]*len(x_test_2), dtype=np.float32)
 
         return x_train_pca[idx], y_train2[idx]
 
 if __name__ == '__main__':
+    k = 3
     generator = Generator_minst()
-    data, labels = generator.generate(50, 2)
+    data, labels = generator.generate(50, 2, k)
     id0 = np.where(labels == 0)[0]
     id1 = np.where(labels == 1)[0]
+    if k>2:
+        id2 = np.where(labels == 2)[0]
     
-    # plt.figure()
-    # plt.scatter(data[id0, 0], data[id0, 1], c='r')
-    # plt.scatter(data[id1, 0], data[id1, 1], c='b')
-    # plt.show()
+    plt.figure()
+    plt.scatter(data[id0, 0], data[id0, 1], c='r')
+    plt.scatter(data[id1, 0], data[id1, 1], c='b')
+    if k>2:
+        plt.scatter(data[id2, 0], data[id2, 1], c='g')
+    plt.show()
