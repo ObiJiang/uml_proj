@@ -59,7 +59,7 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*3+3
+            cov_factor = np.random.rand(1)*5+5
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
             # cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*100)
