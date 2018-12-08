@@ -353,17 +353,17 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            generator = Generator_minst()
-            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+            # generator = Generator_minst()
+            # data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
             #data, labels = eduGenerate(metaCluster.fea)
 
-            #data, labels = make_circles(100)
-            #data, labels = make_moons(100)
-            kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
-            print(np.sum(np.abs(labels-kmeans.labels_)))
+            # data, labels = make_circles(100)
+            # data, labels = make_moons(100)
+            # kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
+            # print(np.sum(np.abs(labels-kmeans.labels_)))
 
-            data = np.expand_dims(data, axis=0)
-            labels = np.expand_dims(labels, axis=0)
-            #data, labels = metaCluster.create_dataset()
+            # data = np.expand_dims(data, axis=0)
+            # labels = np.expand_dims(labels, axis=0)
+            data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
