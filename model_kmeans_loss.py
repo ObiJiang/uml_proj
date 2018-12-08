@@ -228,6 +228,13 @@ class MetaCluster():
         #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
         return AttrDict(locals())
 
+    def mutual_info(self,true_label,predicted_label):
+        nmi_list = []
+        for i in range(true_label.shape[0]):
+            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i])
+            nmi_list.append(nmi)
+        return np.mean(nmi_list)
+
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
@@ -235,9 +242,10 @@ class MetaCluster():
             perm = np.random.permutation(self.num_sequence)
             data = data[:,perm,:]
             labels = labels[:,perm]
-            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
+            _,_,miss_rate,predicted_label = sess.run([model.keep_state_op,model.opt,model.miss_rate,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
-        print("Epochs{}:{}".format(epoch_ind,miss_rate))
+            nmi = self.mutual_info(labels,predicted_label)
+        print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
 
     def test(self,data,labels,sess,validation=False):
         model = self.model
@@ -247,10 +255,11 @@ class MetaCluster():
             data = data[:,perm,:]
             labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
+            nmi = self.mutual_info(labels,predicted_label)
             if not validation:
-                print("Epochs{}:{}".format(epoch_ind,miss_rate))
+                print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
         if validation:
-            print("Epochs{}:{}".format(epoch_ind,miss_rate))
+            print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
         if config.show_comparison_graph:
             data = np.squeeze(data)
             labels = np.squeeze(labels)
