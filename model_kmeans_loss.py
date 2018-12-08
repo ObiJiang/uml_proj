@@ -164,8 +164,8 @@ class MetaCluster():
 
         """ Define LSTM network """
         with tf.variable_scope('core'):
-            output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
-            #output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
+            #output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
+            output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
             #output, states = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(cell, sequences, dtype=tf.float32, initial_states_fw = cell_init_state)
 
         """ Keep and Clear Op """
@@ -188,8 +188,8 @@ class MetaCluster():
             # atten_weights = tf.matmul(output,output,transpose_b=True)
             # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
             #policy = tf.layers.dense(attended_output,self.k)
-            policy = tf.layers.dense(output,self.k)
-            #policy = output
+            #policy = tf.layers.dense(output,self.k)
+            policy = output
 
         """ Define Loss and Optimizer """
         # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
@@ -237,7 +237,6 @@ class MetaCluster():
             labels = labels[:,perm]
             _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
-            print(miss_rate)
         print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess,validation=False):
