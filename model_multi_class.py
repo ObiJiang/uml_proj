@@ -211,7 +211,7 @@ class MetaCluster():
     def mutual_info(self,true_label,predicted_label):
         nmi_list = []
         for i in range(true_label.shape[0]):
-            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i])
+            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i],'max')
             nmi_list.append(nmi)
         return np.mean(nmi_list)
 

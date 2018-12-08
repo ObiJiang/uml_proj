@@ -40,6 +40,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.01
         self.keep_prob = 0.8
+        self.alpha = 0.1
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -163,8 +164,8 @@ class MetaCluster():
 
         """ Define LSTM network """
         with tf.variable_scope('core'):
-            #output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
-            output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
+            output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
+            #output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
             #output, states = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(cell, sequences, dtype=tf.float32, initial_states_fw = cell_init_state)
 
         """ Keep and Clear Op """
@@ -187,8 +188,8 @@ class MetaCluster():
             # atten_weights = tf.matmul(output,output,transpose_b=True)
             # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
             #policy = tf.layers.dense(attended_output,self.k)
-            #policy = tf.layers.dense(output,self.k)
-            policy = output
+            policy = tf.layers.dense(output,self.k)
+            #policy = output
 
         """ Define Loss and Optimizer """
         # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
@@ -223,7 +224,7 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(kmeans_loss+KL_loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
         #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
         return AttrDict(locals())
 
