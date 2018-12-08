@@ -34,7 +34,7 @@ class MetaCluster():
         self.config = config
         self.n_unints = 32
         self.batch_size = config.batch_size
-        self.k = 2
+        self.k = config.k
         self.num_sequence = 100
         self.fea = config.fea
         self.lr = 0.003
@@ -281,6 +281,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--fea', default=2, type=int)
+    parser.add_argument('--k', default=3, type=int)
     parser.add_argument('--training_exp_num', default=50, type=int)
 
     config = parser.parse_args()
