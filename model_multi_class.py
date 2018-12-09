@@ -387,4 +387,4 @@ if __name__ == '__main__':
             labels = iris.target
             kmeans = KMeans(n_clusters=3, random_state=0).fit(data)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
-            metaCluster.test(np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0),sess)
+            metaCluster.test(data,labels,sess)
