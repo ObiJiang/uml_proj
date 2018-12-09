@@ -39,6 +39,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.003
         self.keep_prob = 0.8
+        self.save_ind = 1
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -62,9 +63,12 @@ class MetaCluster():
             # cov = np.diag(s)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
+            plt.figure()
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
-            plt.show()
+            #plt.show()
+            plt.savefig(str(self.save_ind)+'.png')
+            self.save_ind += 1
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
