@@ -384,7 +384,8 @@ if __name__ == '__main__':
             from sklearn.datasets import load_iris
             iris = load_iris()
             data = iris.data
+            print(data.shape)
             labels = iris.target
             kmeans = KMeans(n_clusters=3, random_state=0).fit(data)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
-            metaCluster.test(data,labels,sess)
+            metaCluster.test(np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0),sess)
