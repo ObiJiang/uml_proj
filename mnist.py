@@ -36,9 +36,6 @@ class Generator_minst(object):
         x_train_1 = self.x_train10[first]
         x_train_2 = self.x_train10[second]
         x_train_3 = self.x_train10[3]
-        x_test_1 = self.x_test10[first]
-        x_test_2 = self.x_test10[second]
-        x_test_3 = self.x_test10[3]
 
         id1 = np.arange(len(x_train_1))
         id2 = np.arange(len(x_train_2))
@@ -61,15 +58,33 @@ class Generator_minst(object):
         x_train_pca = pca.fit_transform(x_norm)
         print(np.sum(pca.explained_variance_ratio_))
 
-        x_test2 = np.concatenate((x_test_1, x_test_2), axis=0)
-        y_test2 = np.array([0]*len(x_test_1)+[1]*len(x_test_2), dtype=np.float32)
+        return StandardScaler().fit_transform(x_train_pca[idx]), y_train2[idx]
+
+    def generate_test(self, size=100, fea=200):
+        x_train_1 = self.x_train10[1]
+        x_train_2 = self.x_train10[8]
+
+        id1 = np.arange(len(x_train_1))
+        id2 = np.arange(len(x_train_2))
+        np.random.shuffle(id1)
+        np.random.shuffle(id2)
+
+        x_train2 = np.concatenate((x_train_1[id1[:size]], x_train_2[id2[:size]]), axis=0)
+        y_train2 = np.array([0]*size+[1]*size, dtype=np.float32)
+        idx = np.arange(size*2)
+        np.random.shuffle(idx)
+
+        x_norm = StandardScaler().fit_transform(x_train2)
+        pca = PCA(n_components=fea, whiten=True)
+        x_train_pca = pca.fit_transform(x_norm)
+        print(np.sum(pca.explained_variance_ratio_))
 
         return StandardScaler().fit_transform(x_train_pca[idx]), y_train2[idx]
 
 if __name__ == '__main__':
-    k = 3
+    k = 2
     generator = Generator_minst()
-    data, labels = generator.generate(50, 2, k)
+    data, labels = generator.generate_test(50, 2)
     id0 = np.where(labels == 0)[0]
     id1 = np.where(labels == 1)[0]
     if k>2:

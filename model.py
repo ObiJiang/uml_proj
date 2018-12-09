@@ -294,6 +294,8 @@ if __name__ == '__main__':
     parser.add_argument('--training_exp_num', default=50, type=int)
 
     config = parser.parse_args()
+    
+    generator = Generator_minst()
 
     if not config.test:
         metaCluster = MetaCluster(config)
@@ -304,7 +306,7 @@ if __name__ == '__main__':
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
-                    data_one, labels_one = metaCluster.create_dataset()
+                    data_one, labels_one = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
                     data_list.append(data_one)
                     labels_list.append(labels_one)
                 data = np.concatenate(data_list)
@@ -317,7 +319,7 @@ if __name__ == '__main__':
                     data_list = []
                     labels_list = []
                     for _ in range(config.batch_size):
-                        data_one, labels_one = metaCluster.create_dataset()
+                        data_one, labels_one = generator.generate_test(metaCluster.num_sequence//2, metaCluster.fea)
                         data_list.append(data_one)
                         labels_list.append(labels_one)
                     data = np.concatenate(data_list)
@@ -330,7 +332,7 @@ if __name__ == '__main__':
             data_list = []
             labels_list = []
             for _ in range(config.batch_size):
-                data_one, labels_one = metaCluster.create_dataset()
+                data_one, labels_one = generator.generate_test(metaCluster.num_sequence//2, metaCluster.fea)
                 data_list.append(data_one)
                 labels_list.append(labels_one)
             data = np.concatenate(data_list)
@@ -353,8 +355,7 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            generator = Generator_minst()
-            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+            data, labels = generator.generate_test(metaCluster.num_sequence//2, metaCluster.fea)
 
             #data, labels = eduGenerate(metaCluster.fea)
 
