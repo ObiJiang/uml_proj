@@ -246,6 +246,7 @@ class MetaCluster():
             data = data[:,perm,:]
             labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
+            print(predicted_label)
             nmi = self.mutual_info(labels,predicted_label)
             if not validation:
                 print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
