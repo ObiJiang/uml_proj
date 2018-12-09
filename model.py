@@ -35,7 +35,7 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = 2
-        self.num_sequence = 20
+        self.num_sequence = 40
         self.fea = config.fea
         self.lr = 0.003
         self.keep_prob = 0.8
