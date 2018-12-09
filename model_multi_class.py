@@ -514,4 +514,4 @@ if __name__ == '__main__':
 
             kmeans = KMeans(n_clusters=3, random_state=0).fit(data_pca)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
-            metaCluster.test(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess,kmeans)
+            metaCluster.test_compare(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess,kmeans)
