@@ -36,7 +36,7 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = config.k
-        self.num_sequence = 100
+        self.num_sequence = 150
         self.fea = config.fea
         self.lr = 0.003
         self.keep_prob = 0.8
@@ -59,7 +59,7 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*5+5
+            cov_factor = np.random.rand(1)*10+50
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
             # cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*100)
