@@ -246,27 +246,25 @@ class MetaCluster():
             diff = np.abs(labels-predicted_label)
 
             fig = plt.figure()
-            ax = fig.add_subplot(311)
-
             for i in range(self.k):
-                ax.scatter(data[labels==i,0], data[labels==i,1])
-            ax.set_title('Original',fontsize=8)
-            #ax.axis('scaled')
+                plt.scatter(data[labels==i,0], data[labels==i,1])
+            plt.title('Ground Truth')
+            plt.savefig('ground-truth.png')
+            plt.close(fig)
 
-            ax = fig.add_subplot(312)
+            fig = plt.figure()
             for i in range(self.k):
-                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-            ax.set_title('Predicton',fontsize=8)
-            #ax.axis('scaled')
+                plt.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+            plt.title('Meta-Prediction')
+            plt.savefig('meta-prediction.png')
+            plt.close(fig)
 
-            ax = fig.add_subplot(313)
-            ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
-            ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
-            ax.set_title('Difference',fontsize=8)
-            #ax.axis('scaled')
-
-            plt.show()
-
+            fig = plt.figure()
+            plt.scatter(data[diff==0,0], data[diff==0,1],color='black')
+            plt.scatter(data[diff==1,0], data[diff==1,1],color='red')
+            plt.title('Difference')
+            plt.savefig('diff.png')
+            plt.close(fig)
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -369,6 +367,14 @@ if __name__ == '__main__':
             # data, labels = make_moons(100)
             kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
             print(np.sum(np.abs(labels-kmeans.labels_)))
+
+            if config.show_comparison_graph:
+                fig = plt.figure()
+                for i in range(self.k):
+                    plt.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
+                plt.title('kmeans')
+                plt.savefig('kmeans.png')
+                plt.close(fig)
 
             data = np.expand_dims(data, axis=0)
             labels = np.expand_dims(labels, axis=0)
