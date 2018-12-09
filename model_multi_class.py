@@ -378,29 +378,52 @@ class MetaCluster():
             predicted_label = np.squeeze(predicted_label)
             diff = np.abs(labels-predicted_label)
 
+            #
+            # fig = plt.figure()
+            # ax = fig.add_subplot(311)
+            # figg.tight_layout()
+            #
+            # for i in range(self.k):
+            #     ax.scatter(data[labels==i,0], data[labels==i,1])
+            # ax.set_title('Original',fontsize=8)
+            # #ax.axis('scaled')
+            #
+            # ax = fig.add_subplot(312)
+            # for i in range(self.k):
+            #     ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+            # ax.set_title('MetaCluster',fontsize=8)
+            # #ax.axis('scaled')
+            #
+            # ax = fig.add_subplot(313)
+            # for i in range(self.k):
+            #     ax.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
+            # ax.set_title('K-Means',fontsize=8)
+            # #ax.axis('scaled')
+            #
+            # plt.savefig('result.png')
 
             fig = plt.figure()
-            ax = fig.add_subplot(311)
-            fig.tight_layout()
-
             for i in range(self.k):
-                ax.scatter(data[labels==i,0], data[labels==i,1])
-            ax.set_title('Original',fontsize=8)
-            #ax.axis('scaled')
+                plt.scatter(data[labels==i,0], data[labels==i,1])
+            plt.title('Original',fontsize=8)
+            plt.savefig('Orginal.png')
 
-            ax = fig.add_subplot(312)
+            fig = plt.figure()
             for i in range(self.k):
-                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-            ax.set_title('MetaCluster',fontsize=8)
-            #ax.axis('scaled')
+                plt.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+            nmi = self.mutual_info(labels,predicted_label)
+            plt.title('MetaCluster, NMI:'+str(nmi),fontsize=8)
 
-            ax = fig.add_subplot(313)
+            plt.savefig('metaCluster.png')
+
+            fig = plt.figure()
             for i in range(self.k):
-                ax.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
-            ax.set_title('K-Means',fontsize=8)
-            #ax.axis('scaled')
+                plt.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
+            nmi = self.mutual_info(labels,kmeans.labels_)
+            plt.title('K-Means, NMI:' + str(nmi),fontsize=8)
+            plt.savefig('kmeans.png')
 
-            plt.savefig('result.png')
+
 
 
     def save_model(self, sess, epoch):
