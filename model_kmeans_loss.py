@@ -225,7 +225,8 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
+        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
         return AttrDict(locals())
 
