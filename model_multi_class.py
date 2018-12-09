@@ -380,4 +380,11 @@ if __name__ == '__main__':
             # data = np.expand_dims(data, axis=0)
             # labels = np.expand_dims(labels, axis=0)
             #data, labels = metaCluster.create_dataset()
-            metaCluster.test(data,labels,sess)
+
+            from sklearn.datasets import load_iris
+            iris = load_iris()
+            data = iris.data
+            labels = iris.target
+            kmeans = KMeans(n_clusters=3, random_state=0).fit(data)
+            rint(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
+            metaCluster.test(np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0),sess)
