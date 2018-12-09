@@ -370,7 +370,7 @@ if __name__ == '__main__':
 
             if config.show_comparison_graph:
                 fig = plt.figure()
-                for i in range(self.k):
+                for i in range(metaCluster.k):
                     plt.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
                 plt.title('kmeans')
                 plt.savefig('kmeans.png')
