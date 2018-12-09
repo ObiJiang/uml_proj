@@ -411,7 +411,7 @@ class MetaCluster():
             fig = plt.figure()
             for i in range(self.k):
                 plt.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-            nmi = self.mutual_info(labels,predicted_label)
+            nmi = self.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(predicted_label,axis=0))
             plt.title('MetaCluster, NMI:'+str(nmi),fontsize=8)
 
             plt.savefig('metaCluster.png')
@@ -419,7 +419,7 @@ class MetaCluster():
             fig = plt.figure()
             for i in range(self.k):
                 plt.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
-            nmi = self.mutual_info(labels,np.expand_dims(kmeans.labels_,axis=0))
+            nmi = self.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0))
             plt.title('K-Means, NMI:' + str(nmi),fontsize=8)
             plt.savefig('kmeans.png')
 
