@@ -423,9 +423,6 @@ class MetaCluster():
             plt.title('K-Means, NMI:' + str(nmi),fontsize=8)
             plt.savefig('kmeans.png')
 
-
-
-
     def save_model(self, sess, epoch):
         print('\nsaving model...')
 
@@ -538,5 +535,40 @@ if __name__ == '__main__':
             data_pca = pca.fit_transform(x_norm)
 
             kmeans = KMeans(n_clusters=metaCluster.k, random_state=0).fit(data_pca)
-            print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
+            #print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
             metaCluster.test_compare(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess,kmeans)
+
+
+            """
+            0.6162206257799315
+Epochs0: Miss rate 0.12000000476837158, NMI 0.7337382123171647
+Epochs1: Miss rate 0.14000000059604645, NMI 0.7378881777757715
+Epochs2: Miss rate 0.10000000149011612, NMI 0.777705890628253
+Epochs3: Miss rate 0.12000000476837158, NMI 0.7561847269223169
+Epochs4: Miss rate 0.08666666597127914, NMI 0.7831685912852714
+Epochs5: Miss rate 0.1066666692495346, NMI 0.7244442356153582
+Epochs6: Miss rate 0.1066666692495346, NMI 0.748447074075422
+Epochs7: Miss rate 0.1066666692495346, NMI 0.748447074075422
+Epochs8: Miss rate 0.12000000476837158, NMI 0.7337382123171647
+Epochs9: Miss rate 0.1066666692495346, NMI 0.748447074075422
+Epochs10: Miss rate 0.1066666692495346, NMI 0.7355897298375526
+Epochs11: Miss rate 0.12000000476837158, NMI 0.7561847269223169
+Epochs12: Miss rate 0.12666666507720947, NMI 0.7497509878488323
+Epochs13: Miss rate 0.1133333370089531, NMI 0.7408944544321658
+Epochs14: Miss rate 0.1133333370089531, NMI 0.7629748788054993
+Epochs15: Miss rate 0.12666666507720947, NMI 0.7269556280110003
+Epochs16: Miss rate 0.09333333373069763, NMI 0.7856963190683124
+Epochs17: Miss rate 0.08666666597127914, NMI 0.7941437605455859
+Epochs18: Miss rate 0.1133333370089531, NMI 0.7276398502189841
+Epochs19: Miss rate 0.1133333370089531, NMI 0.7408944544321658
+Epochs20: Miss rate 0.10000000149011612, NMI 0.777705890628253
+Epochs21: Miss rate 0.12000000476837158, NMI 0.7561847269223169
+Epochs22: Miss rate 0.12000000476837158, NMI 0.7000104831314156
+Epochs23: Miss rate 0.12000000476837158, NMI 0.7216700333792339
+Epochs24: Miss rate 0.1133333370089531, NMI 0.7408944544321658
+Epochs25: Miss rate 0.1066666692495346, NMI 0.7701409905732125
+Epochs26: Miss rate 0.1133333370089531, NMI 0.7629748788054993
+Epochs27: Miss rate 0.1066666692495346, NMI 0.7701409905732125
+Epochs28: Miss rate 0.14000000059604645, NMI 0.7144365107007519
+Epochs29: Miss rate 0.12000000476837158, NMI 0.7337382123171647
+"""
