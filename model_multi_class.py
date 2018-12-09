@@ -216,7 +216,8 @@ class MetaCluster():
         diff_prob_to_clusters = tf.reduce_sum(tf.reduce_sum(diff_to_clusters*policy_prob,axis=1),axis=1)
         kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/self.num_sequence
 
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
+        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         return AttrDict(locals())
 
     def mutual_info(self,true_label,predicted_label):
