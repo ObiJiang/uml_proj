@@ -7,7 +7,6 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
-from mnist import Generator_minst
 from sklearn.datasets import make_circles
 from sklearn.datasets import make_moons
 from sklearn.cluster import KMeans
@@ -37,7 +36,7 @@ class MetaCluster():
         self.n_unints = 32
         self.batch_size = config.batch_size
         self.k = 2
-        self.num_sequence = 30
+        self.num_sequence = 100
         self.fea = config.fea
         self.lr = 0.01
         self.keep_prob = 0.8
@@ -58,7 +57,7 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*1+1
+            cov_factor = np.random.rand(1)*3+3
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
             # s = np.random.uniform(0.1,0.05,self.fea)
@@ -375,20 +374,13 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            # generator = Generator_minst(metaCluster.fea)
-            # data, labels = generator.generate(metaCluster.num_sequence//2)
-            # data = np.expand_dims(data, axis=0)
-            # labels = np.expand_dims(labels, axis=0)
-            # #data, labels = metaCluster.create_dataset()
-            # metaCluster.test(data,labels,sess)
-
             generator = Generator_minst()
             data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
-            #data, labels = eduGenerate()
+            #data, labels = eduGenerate(metaCluster.fea)
 
-            #data, labels = make_circles(100)
-            #data, labels = make_moons(100)
+            # data, labels = make_circles(100)
+            # data, labels = make_moons(100)
             kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
             print(np.sum(np.abs(labels-kmeans.labels_)))
 
