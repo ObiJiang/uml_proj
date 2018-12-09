@@ -459,9 +459,15 @@ if __name__ == '__main__':
             #data, labels = metaCluster.create_dataset()
 
             from sklearn.datasets import load_iris
+
+
             iris = load_iris()
-            data = iris.data/np.max(iris.data)-0.5
+            data = iris.data#/np.max(iris.data)-0.5
             labels = iris.target
-            kmeans = KMeans(n_clusters=3, random_state=0).fit(data)
+            x_norm = StandardScaler().fit_transform(data)
+            pca = PCA(n_components=metaCluster.fea, whiten=True)
+            data_pca = pca.fit_transform(x_norm)
+
+            kmeans = KMeans(n_clusters=3, random_state=0).fit(data_pca)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
-            metaCluster.test(np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0),sess)
+            metaCluster.test(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess)
