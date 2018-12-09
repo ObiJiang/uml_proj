@@ -330,33 +330,33 @@ class MetaCluster():
                 print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
         if validation:
             print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
-        if config.show_comparison_graph:
-            data = np.squeeze(data)
-            labels = np.squeeze(labels)
-            predicted_label = np.squeeze(predicted_label)
-            diff = np.abs(labels-predicted_label)
-
-            fig = plt.figure()
-            ax = fig.add_subplot(311)
-
-            for i in range(self.k):
-                ax.scatter(data[labels==i,0], data[labels==i,1])
-            ax.set_title('Original',fontsize=8)
-            #ax.axis('scaled')
-
-            ax = fig.add_subplot(312)
-            for i in range(self.k):
-                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-            ax.set_title('Predicton',fontsize=8)
-            #ax.axis('scaled')
-
-            ax = fig.add_subplot(313)
-            ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
-            ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
-            ax.set_title('Difference',fontsize=8)
-            #ax.axis('scaled')
-
-            plt.show()
+        # if config.show_comparison_graph:
+        #     data = np.squeeze(data)
+        #     labels = np.squeeze(labels)
+        #     predicted_label = np.squeeze(predicted_label)
+        #     diff = np.abs(labels-predicted_label)
+        #
+        #     fig = plt.figure()
+        #     ax = fig.add_subplot(311)
+        #
+        #     for i in range(self.k):
+        #         ax.scatter(data[labels==i,0], data[labels==i,1])
+        #     ax.set_title('Original',fontsize=8)
+        #     #ax.axis('scaled')
+        #
+        #     ax = fig.add_subplot(312)
+        #     for i in range(self.k):
+        #         ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+        #     ax.set_title('Predicton',fontsize=8)
+        #     #ax.axis('scaled')
+        #
+        #     ax = fig.add_subplot(313)
+        #     ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
+        #     ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
+        #     ax.set_title('Difference',fontsize=8)
+        #     #ax.axis('scaled')
+        #
+        #     plt.show()
 
 
     def save_model(self, sess, epoch):
@@ -473,3 +473,31 @@ if __name__ == '__main__':
             kmeans = KMeans(n_clusters=3, random_state=0).fit(data_pca)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
             metaCluster.test(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess)
+
+            if config.show_comparison_graph:
+                data = np.squeeze(data)
+                labels = np.squeeze(labels)
+                predicted_label = np.squeeze(predicted_label)
+                diff = np.abs(labels-predicted_label)
+
+                fig = plt.figure()
+                ax = fig.add_subplot(311)
+
+                for i in range(metaCluster.k):
+                    ax.scatter(data[labels==i,0], data[labels==i,1])
+                ax.set_title('Original',fontsize=8)
+                #ax.axis('scaled')
+
+                ax = fig.add_subplot(312)
+                for i in range(metaCluster.k):
+                    ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+                ax.set_title('MetaCluster',fontsize=8)
+                #ax.axis('scaled')
+
+                ax = fig.add_subplot(313)
+                for i in range(metaCluster.k):
+                    ax.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
+                ax.set_title('K-Means',fontsize=8)
+                #ax.axis('scaled')
+
+                plt.savefig('result.png')
