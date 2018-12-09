@@ -378,9 +378,10 @@ class MetaCluster():
             predicted_label = np.squeeze(predicted_label)
             diff = np.abs(labels-predicted_label)
 
+
             fig = plt.figure()
             ax = fig.add_subplot(311)
-            ax.tight_layout()
+            fig.tight_layout()
 
             for i in range(self.k):
                 ax.scatter(data[labels==i,0], data[labels==i,1])
