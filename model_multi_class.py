@@ -246,7 +246,6 @@ class MetaCluster():
             data = data[:,perm,:]
             labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
-            print(predicted_label)
             nmi = self.mutual_info(labels,predicted_label)
             if not validation:
                 print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
@@ -384,8 +383,7 @@ if __name__ == '__main__':
 
             from sklearn.datasets import load_iris
             iris = load_iris()
-            data = iris.data
-            print(data.shape)
+            data = iris.data/np.max(iris.data)-0.5
             labels = iris.target
             kmeans = KMeans(n_clusters=3, random_state=0).fit(data)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
