@@ -380,6 +380,7 @@ class MetaCluster():
 
             fig = plt.figure()
             ax = fig.add_subplot(311)
+            ax.tight_layout()
 
             for i in range(self.k):
                 ax.scatter(data[labels==i,0], data[labels==i,1])
@@ -512,6 +513,6 @@ if __name__ == '__main__':
             pca = PCA(n_components=metaCluster.fea, whiten=True)
             data_pca = pca.fit_transform(x_norm)
 
-            kmeans = KMeans(n_clusters=3, random_state=0).fit(data_pca)
+            kmeans = KMeans(n_clusters=metaCluster.k, random_state=0).fit(data_pca)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
             metaCluster.test_compare(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess,kmeans)
