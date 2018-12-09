@@ -358,6 +358,48 @@ class MetaCluster():
         #
         #     plt.show()
 
+    def test_compare(self,data,labels,sess,kmeans, validation=False):
+        model = self.model
+        sess.run(model.clear_state_op)
+        for epoch_ind in range(30):
+            perm = np.random.permutation(self.num_sequence)
+            data = data[:,perm,:]
+            labels = labels[:,perm]
+            states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
+            nmi = self.mutual_info(labels,predicted_label)
+            if not validation:
+                print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+        if validation:
+            print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+
+        if config.show_comparison_graph:
+            data = np.squeeze(data)
+            labels = np.squeeze(labels)
+            predicted_label = np.squeeze(predicted_label)
+            diff = np.abs(labels-predicted_label)
+
+            fig = plt.figure()
+            ax = fig.add_subplot(311)
+
+            for i in range(self.k):
+                ax.scatter(data[labels==i,0], data[labels==i,1])
+            ax.set_title('Original',fontsize=8)
+            #ax.axis('scaled')
+
+            ax = fig.add_subplot(312)
+            for i in range(self.k):
+                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
+            ax.set_title('MetaCluster',fontsize=8)
+            #ax.axis('scaled')
+
+            ax = fig.add_subplot(313)
+            for i in range(self.k):
+                ax.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
+            ax.set_title('K-Means',fontsize=8)
+            #ax.axis('scaled')
+
+            plt.savefig('result.png')
+
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -472,32 +514,4 @@ if __name__ == '__main__':
 
             kmeans = KMeans(n_clusters=3, random_state=0).fit(data_pca)
             print(metaCluster.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0)))
-            metaCluster.test(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess)
-
-            if config.show_comparison_graph:
-                data = np.squeeze(data)
-                labels = np.squeeze(labels)
-                predicted_label = np.squeeze(predicted_label)
-                diff = np.abs(labels-predicted_label)
-
-                fig = plt.figure()
-                ax = fig.add_subplot(311)
-
-                for i in range(metaCluster.k):
-                    ax.scatter(data[labels==i,0], data[labels==i,1])
-                ax.set_title('Original',fontsize=8)
-                #ax.axis('scaled')
-
-                ax = fig.add_subplot(312)
-                for i in range(metaCluster.k):
-                    ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-                ax.set_title('MetaCluster',fontsize=8)
-                #ax.axis('scaled')
-
-                ax = fig.add_subplot(313)
-                for i in range(metaCluster.k):
-                    ax.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
-                ax.set_title('K-Means',fontsize=8)
-                #ax.axis('scaled')
-
-                plt.savefig('result.png')
+            metaCluster.test(np.expand_dims(data_pca,axis=0),np.expand_dims(labels,axis=0),sess,kmeans)
