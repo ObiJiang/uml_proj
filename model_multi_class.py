@@ -417,10 +417,12 @@ class MetaCluster():
             plt.savefig('metaCluster.png')
 
             kmeans = KMeans(n_clusters=self.k, random_state=0).fit(data)
+            nmi = self.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0))
+            print(nmi)
             fig = plt.figure()
             for i in range(self.k):
                 plt.scatter(data[kmeans.labels_==i,0], data[kmeans.labels_==i,1])
-            nmi = self.mutual_info(np.expand_dims(labels,axis=0),np.expand_dims(kmeans.labels_,axis=0))
+
             plt.title('K-Means, NMI:' + str(nmi),fontsize=8)
             plt.savefig('kmeans.png')
 
