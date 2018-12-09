@@ -291,7 +291,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--fea', default=2, type=int)
-    parser.add_argument('--training_exp_num', default=50, type=int)
+    parser.add_argument('--training_exp_num', default=100, type=int)
 
     config = parser.parse_args()
     
@@ -307,6 +307,8 @@ if __name__ == '__main__':
                 labels_list = []
                 for _ in range(config.batch_size):
                     data_one, labels_one = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+                    data_one = np.expand_dims(data_one, axis=0)
+                    labels_one = np.expand_dims(labels_one, axis=0)
                     data_list.append(data_one)
                     labels_list.append(labels_one)
                 data = np.concatenate(data_list)
@@ -320,6 +322,8 @@ if __name__ == '__main__':
                     labels_list = []
                     for _ in range(config.batch_size):
                         data_one, labels_one = generator.generate_test(metaCluster.num_sequence//2, metaCluster.fea)
+                        data_one = np.expand_dims(data_one, axis=0)
+                        labels_one = np.expand_dims(labels_one, axis=0)
                         data_list.append(data_one)
                         labels_list.append(labels_one)
                     data = np.concatenate(data_list)
@@ -333,6 +337,8 @@ if __name__ == '__main__':
             labels_list = []
             for _ in range(config.batch_size):
                 data_one, labels_one = generator.generate_test(metaCluster.num_sequence//2, metaCluster.fea)
+                data_one = np.expand_dims(data_one, axis=0)
+                labels_one = np.expand_dims(labels_one, axis=0)
                 data_list.append(data_one)
                 labels_list.append(labels_one)
             data = np.concatenate(data_list)

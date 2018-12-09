@@ -77,7 +77,6 @@ class Generator_minst(object):
         x_norm = StandardScaler().fit_transform(x_train2)
         pca = PCA(n_components=fea, whiten=True)
         x_train_pca = pca.fit_transform(x_norm)
-        print(np.sum(pca.explained_variance_ratio_))
 
         return StandardScaler().fit_transform(x_train_pca[idx]), y_train2[idx]
 
