@@ -7,13 +7,11 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
-from mnist import Generator_minst
 from sklearn.datasets import make_circles
 from sklearn.datasets import make_moons
 from sklearn.cluster import KMeans
 from edu import eduGenerate     # seq=100 fea=5
 from mnist import Generator_minst
-from sklearn.metrics import normalized_mutual_info_score
 
 # attention + bi-directional
 # maml
@@ -39,9 +37,9 @@ class MetaCluster():
         self.k = 2
         self.num_sequence = 100
         self.fea = config.fea
-        self.lr = 0.01
+        self.lr = 0.003
         self.keep_prob = 0.8
-        self.alpha = 0.05
+        self.save_ind = 1
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -58,16 +56,19 @@ class MetaCluster():
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*1+1
+            cov_factor = np.random.rand(1)*5+5
             cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
             cov = cov.T @ cov
             # s = np.random.uniform(0.1,0.05,self.fea)
             # cov = np.diag(s)
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
         if self.config.show_graph:
+            plt.figure()
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
-            plt.show()
+            #plt.show()
+            plt.savefig(str(self.save_ind)+'.png')
+            self.save_ind += 1
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
 
@@ -204,15 +205,6 @@ class MetaCluster():
 
         loss = tf.reduce_mean(loss_batch)
 
-        policy_prob = tf.nn.softmax(policy,axis=2)
-        policy_prob_stricter = tf.nn.softmax(tf.square(policy_prob),axis=2)
-
-        cluster_centers = tf.reduce_mean(tf.expand_dims(policy_prob,axis=3)*tf.expand_dims(sequences,axis=2),axis=1,keepdims=True)
-        diff_to_clusters = tf.norm(tf.expand_dims(sequences,axis=2) - cluster_centers,axis=3)
-        diff_prob_to_clusters = tf.reduce_sum(tf.reduce_sum(diff_to_clusters*policy_prob,axis=1),axis=1)
-        kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/(self.num_sequence*self.fea)
-        KL_loss = tf.reduce_sum((tf.log(policy_prob_stricter)-tf.log(policy_prob))*policy_prob)
-
         miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
         miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
 
@@ -225,17 +217,8 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
-        #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss+l2)
         return AttrDict(locals())
-
-    def mutual_info(self,true_label,predicted_label):
-        nmi_list = []
-        for i in range(true_label.shape[0]):
-            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i])
-            nmi_list.append(nmi)
-        return np.mean(nmi_list)
 
     def train(self,data,labels,sess):
         model = self.model
@@ -244,10 +227,9 @@ class MetaCluster():
             perm = np.random.permutation(self.num_sequence)
             data = data[:,perm,:]
             labels = labels[:,perm]
-            _,_,miss_rate,predicted_label = sess.run([model.keep_state_op,model.opt,model.miss_rate,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
-            nmi = self.mutual_info(labels,predicted_label)
-        print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+        print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess,validation=False):
         model = self.model
@@ -257,11 +239,10 @@ class MetaCluster():
             data = data[:,perm,:]
             labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
-            nmi = self.mutual_info(labels,predicted_label)
             if not validation:
-                print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+                print("Epochs{}:{}".format(epoch_ind,miss_rate))
         if validation:
-            print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+            print("Epochs{}:{}".format(epoch_ind,miss_rate))
         if config.show_comparison_graph:
             data = np.squeeze(data)
             labels = np.squeeze(labels)
@@ -314,7 +295,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_save_dir', default='./out')
     parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--fea', default=2, type=int)
-    parser.add_argument('--training_exp_num', default=100, type=int)
+    parser.add_argument('--training_exp_num', default=50, type=int)
 
     config = parser.parse_args()
 
@@ -376,17 +357,10 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            # generator = Generator_minst(metaCluster.fea)
-            # data, labels = generator.generate(metaCluster.num_sequence//2)
-            # data = np.expand_dims(data, axis=0)
-            # labels = np.expand_dims(labels, axis=0)
-            # #data, labels = metaCluster.create_dataset()
-            # metaCluster.test(data,labels,sess)
+            # generator = Generator_minst()
+            # data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
 
-            generator = Generator_minst()
-            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
-
-            #data, labels = eduGenerate()
+            data, labels = eduGenerate(metaCluster.fea)
 
             #data, labels = make_circles(100)
             #data, labels = make_moons(100)

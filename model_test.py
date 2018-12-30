@@ -7,23 +7,12 @@ from tqdm import tqdm
 import argparse
 import os
 from tensorflow.python.ops.rnn import _transpose_batch_time
-from mnist import Generator_minst
-from sklearn.datasets import make_circles
-from sklearn.datasets import make_moons
-from sklearn.cluster import KMeans
-from edu import eduGenerate     # seq=100 fea=5
-from mnist import Generator_minst
-from sklearn.metrics import normalized_mutual_info_score
 
 # attention + bi-directional
 # maml
 # put lstm ouput into lstm
 # reptile + ntm
 # just 5 iterations
-# also try 10 clusters
-# try agent and rl update rule
-# shuffle
-# mimic k-means loss
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -38,35 +27,30 @@ class MetaCluster():
         self.batch_size = config.batch_size
         self.k = 2
         self.num_sequence = 100
-        self.fea = config.fea
-        self.lr = 0.01
-        self.keep_prob = 0.8
-        self.alpha = 0.05
+        self.fea = 2
+        self.lr = 0.003
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
     def create_dataset(self):
-        labels = np.arange(self.num_sequence)%self.k
+        labels = np.arange(self.num_sequence)%2
         np.random.shuffle(labels)
 
         data = np.zeros((self.num_sequence,self.fea))
 
         mean = np.random.rand(self.k, self.fea)*2-1
 
-        sort_ind = np.argsort(mean[:,0])
+        #cov = np.identity(self.fea)*0.1
+        cov = np.random.normal(size=(self.fea,self.fea))
+        cov = cov.T @ cov
 
-        for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*1+1
-            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
-            cov = cov.T @ cov
-            # s = np.random.uniform(0.1,0.05,self.fea)
-            # cov = np.diag(s)
-            data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
+        data[labels==1,:] = np.random.multivariate_normal(mean[1, :], cov, (np.sum(labels==1)))
+        data[labels==0,:] = np.random.multivariate_normal(mean[0, :], cov, (np.sum(labels==0)))
         if self.config.show_graph:
-            for i in range(self.k):
-                plt.scatter(data[labels==i,0], data[labels==i,1])
+            plt.scatter(data[labels==1,0], data[labels==1,1])
+            plt.scatter(data[labels==0,0], data[labels==0,1])
             plt.show()
 
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
@@ -77,7 +61,7 @@ class MetaCluster():
         max_time = seq_lengths+1  # this is the max time step per batch
         inputs_ta = tf.TensorArray(dtype=tf.float32, size=max_time, clear_after_read=False)
         inputs_ta = inputs_ta.unstack(_transpose_batch_time(input_))  # model_input is the input placeholder
-        output_dim = self.k  # the dimensionality of the model's output at each time step
+        output_dim = 2  # the dimensionality of the model's output at each time step
         input_dim = input_.get_shape()[-1].value +  output_dim # the dimensionality of the input to each time step
 
         def loop_fn(time, cell_output, cell_state, loop_state):
@@ -148,7 +132,7 @@ class MetaCluster():
         labels = tf.placeholder(tf.int32, [self.batch_size,None])
 
         # cell = tf.nn.rnn_cell.BasicLSTMCell(self.n_unints,state_is_tuple=True)
-        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,16,2]]
+        cells = [tf.contrib.rnn.BasicLSTMCell(n_unint) for n_unint in [32,32]]
         cell = tf.contrib.rnn.MultiRNNCell(cells)
 
         """ Save init states (zeros) """
@@ -165,8 +149,8 @@ class MetaCluster():
 
         """ Define LSTM network """
         with tf.variable_scope('core'):
-            #output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
-            output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
+            output, states = tf.nn.dynamic_rnn(cell, sequences, dtype=tf.float32, initial_state = cell_init_state)
+            #output, states = self.sampling_rnn(cell, cell_init_state,sequences, self.num_sequence)
             #output, states = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(cell, sequences, dtype=tf.float32, initial_states_fw = cell_init_state)
 
         """ Keep and Clear Op """
@@ -186,110 +170,52 @@ class MetaCluster():
 
         """ Define Policy and Value """
         with tf.variable_scope('core'):
-            # atten_weights = tf.matmul(output,output,transpose_b=True)
-            # attended_output = tf.reduce_sum(tf.expand_dims(atten_weights,axis=3)*tf.expand_dims(output,axis=2),axis=2)
-            #policy = tf.layers.dense(attended_output,self.k)
-            #policy = tf.layers.dense(output,self.k)
-            policy = output
+            policy = tf.layers.dense(output,self.k)
+            #policy = output
 
         """ Define Loss and Optimizer """
-        # loss = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy)),
-        #         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy))]
+        miss_list_0 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_list_1 = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64))
 
-        loss_batch_class = [tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy),axis=1),
-                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.mod(labels+1,2) ,logits= policy),axis=1)]
+        miss_rate_0 = tf.reduce_sum(tf.cast(miss_list_0,tf.float32),axis=1,keepdims=True)
+        miss_rate_1 = tf.reduce_sum(tf.cast(miss_list_1,tf.float32),axis=1,keepdims=True)
 
+        real_miss_list = tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64))
+        miss_rate = tf.reduce_sum(tf.cast(real_miss_list,tf.float32))/(self.num_sequence*self.batch_size)
 
-        loss_batch = tf.minimum(loss_batch_class[0],loss_batch_class[1])
-
-        loss = tf.reduce_mean(loss_batch)
-
-        policy_prob = tf.nn.softmax(policy,axis=2)
-        policy_prob_stricter = tf.nn.softmax(tf.square(policy_prob),axis=2)
-
-        cluster_centers = tf.reduce_mean(tf.expand_dims(policy_prob,axis=3)*tf.expand_dims(sequences,axis=2),axis=1,keepdims=True)
-        diff_to_clusters = tf.norm(tf.expand_dims(sequences,axis=2) - cluster_centers,axis=3)
-        diff_prob_to_clusters = tf.reduce_sum(tf.reduce_sum(diff_to_clusters*policy_prob,axis=1),axis=1)
-        kmeans_loss = tf.reduce_mean(diff_prob_to_clusters)/(self.num_sequence*self.fea)
-        KL_loss = tf.reduce_sum((tf.log(policy_prob_stricter)-tf.log(policy_prob))*policy_prob)
-
-        miss_list_0 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(labels,tf.float64)),tf.float32),axis=1)
-        miss_list_1 = tf.reduce_sum(tf.cast(tf.not_equal(tf.cast(tf.argmax(policy,axis=2),tf.float64),tf.cast(tf.mod(labels+1,2),tf.float64)),tf.float32),axis=1)
-
-        miss_rate = tf.reduce_sum(tf.minimum(miss_list_0,miss_list_1),axis=0)/(self.num_sequence*self.batch_size)
-
-        l2 = 0.001 * sum(
+        l2 = 0.0005 * sum(
             tf.nn.l2_loss(tf_var)
                 for tf_var in tf.trainable_variables()
                 if ("core" in tf_var.name)
         )
 
-        predicted_label = tf.argmax(policy,axis=2)
-        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = labels ,logits= policy))
         opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
-        #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
-        return AttrDict(locals())
 
-    def mutual_info(self,true_label,predicted_label):
-        nmi_list = []
-        for i in range(true_label.shape[0]):
-            nmi = normalized_mutual_info_score(true_label[i],predicted_label[i])
-            nmi_list.append(nmi)
-        return np.mean(nmi_list)
+        offset = tf.argmin(tf.concat([miss_rate_0,miss_rate_1],axis=1),axis=1)
+
+        return AttrDict(locals())
 
     def train(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(30):
-            perm = np.random.permutation(self.num_sequence)
-            data = data[:,perm,:]
-            labels = labels[:,perm]
-            _,_,miss_rate,predicted_label = sess.run([model.keep_state_op,model.opt,model.miss_rate,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
-            #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
-            nmi = self.mutual_info(labels,predicted_label)
-        print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+        for epoch_ind in range(100):
+            offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
 
-    def test(self,data,labels,sess,validation=False):
+        test_labels = (labels + np.expand_dims(offset,axis=1))%2
+        for epoch_ind in range(100):
+            _,_,miss_rate = sess.run([model.keep_state_op,model.opt,model.miss_rate],feed_dict={model.sequences:data,model.labels:test_labels})
+        print("Epochs{}:{}".format(epoch_ind,miss_rate))
+
+    def test(self,data,labels,sess):
         model = self.model
         sess.run(model.clear_state_op)
-        for epoch_ind in range(30):
-            perm = np.random.permutation(self.num_sequence)
-            data = data[:,perm,:]
-            labels = labels[:,perm]
-            states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
-            nmi = self.mutual_info(labels,predicted_label)
-            if not validation:
-                print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
-        if validation:
-            print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
-        if config.show_comparison_graph:
-            data = np.squeeze(data)
-            labels = np.squeeze(labels)
-            predicted_label = np.squeeze(predicted_label)
-            diff = np.abs(labels-predicted_label)
+        offset = sess.run(model.offset,feed_dict={model.sequences:data,model.labels:labels})
 
-            fig = plt.figure()
-            ax = fig.add_subplot(311)
-
-            for i in range(self.k):
-                ax.scatter(data[labels==i,0], data[labels==i,1])
-            ax.set_title('Original',fontsize=8)
-            #ax.axis('scaled')
-
-            ax = fig.add_subplot(312)
-            for i in range(self.k):
-                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-            ax.set_title('Predicton',fontsize=8)
-            #ax.axis('scaled')
-
-            ax = fig.add_subplot(313)
-            ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
-            ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
-            ax.set_title('Difference',fontsize=8)
-            #ax.axis('scaled')
-
-            plt.show()
-
+        test_labels = (labels + np.expand_dims(offset,axis=1))%2
+        for epoch_ind in range(100):
+            states,miss_rate,loss = sess.run([model.keep_state_op,model.miss_rate,model.loss],feed_dict={model.sequences:data,model.labels:test_labels})
+            print("Epochs{}:{}".format(epoch_ind,miss_rate))
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -309,12 +235,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--test', default=False, action='store_true')
     parser.add_argument('--show_graph', default=False, action='store_true')
-    parser.add_argument('--show_comparison_graph', default=False, action='store_true')
     parser.add_argument('--max_to_keep', default=3, type=int)
     parser.add_argument('--model_save_dir', default='./out')
-    parser.add_argument('--batch_size', default=100, type=int)
-    parser.add_argument('--fea', default=2, type=int)
-    parser.add_argument('--training_exp_num', default=100, type=int)
+    parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--training_exp_num', default=1000, type=int)
 
     config = parser.parse_args()
 
@@ -323,7 +247,7 @@ if __name__ == '__main__':
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             # training
-            for train_ind in tqdm(range(int(config.training_exp_num))):
+            for _ in tqdm(range(int(config.training_exp_num))):
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
@@ -334,18 +258,6 @@ if __name__ == '__main__':
                 labels = np.concatenate(labels_list)
                 metaCluster.train(data,labels,sess)
 
-                if train_ind % 10 == 0:
-                    print('-----validation-----')
-                    # validation
-                    data_list = []
-                    labels_list = []
-                    for _ in range(config.batch_size):
-                        data_one, labels_one = metaCluster.create_dataset()
-                        data_list.append(data_one)
-                        labels_list.append(labels_one)
-                    data = np.concatenate(data_list)
-                    labels = np.concatenate(labels_list)
-                    metaCluster.test(data,labels,sess,validation=True)
             # saving models ...
             metaCluster.save_model(sess,config.training_exp_num)
 
@@ -376,24 +288,8 @@ if __name__ == '__main__':
             print("Loading saved model from {}".format(save_path))
             saver.restore(sess, save_path)
 
-            # generator = Generator_minst(metaCluster.fea)
-            # data, labels = generator.generate(metaCluster.num_sequence//2)
-            # data = np.expand_dims(data, axis=0)
-            # labels = np.expand_dims(labels, axis=0)
-            # #data, labels = metaCluster.create_dataset()
-            # metaCluster.test(data,labels,sess)
-
-            generator = Generator_minst()
-            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
-
-            #data, labels = eduGenerate()
-
-            #data, labels = make_circles(100)
-            #data, labels = make_moons(100)
-            kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
-            print(np.sum(np.abs(labels-kmeans.labels_)))
-
-            data = np.expand_dims(data, axis=0)
-            labels = np.expand_dims(labels, axis=0)
-            #data, labels = metaCluster.create_dataset()
+            data, labels = metaCluster.create_dataset()
             metaCluster.test(data,labels,sess)
+
+            # labels = (labels+1)%2
+            # metaCluster.test(data,labels,sess)
