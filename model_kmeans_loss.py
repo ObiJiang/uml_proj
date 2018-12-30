@@ -11,7 +11,6 @@ from mnist import Generator_minst
 from sklearn.datasets import make_circles
 from sklearn.datasets import make_moons
 from sklearn.cluster import KMeans
-from edu import eduGenerate     # seq=100 fea=5
 from mnist import Generator_minst
 from sklearn.metrics import normalized_mutual_info_score
 
@@ -41,7 +40,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.01
         self.keep_prob = 0.8
-        self.alpha = 0.05
+        self.alpha = 0.5
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -225,8 +224,8 @@ class MetaCluster():
         )
 
         predicted_label = tf.argmax(policy,axis=2)
-        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
-        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize((self.alpha)*loss+(1-self.alpha)*kmeans_loss)
+        #opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         #opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(kmeans_loss)
         return AttrDict(locals())
 
@@ -246,50 +245,95 @@ class MetaCluster():
             labels = labels[:,perm]
             _,_,miss_rate,predicted_label = sess.run([model.keep_state_op,model.opt,model.miss_rate,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             #miss_rate = sess.run([model.output],feed_dict={model.sequences:data,model.labels:labels})
-            nmi = self.mutual_info(labels,predicted_label)
-        print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+            #nmi = self.mutual_info(labels,predicted_label)
+        print("Epochs{}: Miss rate {}".format(epoch_ind,miss_rate))
 
     def test(self,data,labels,sess,validation=False):
         model = self.model
         sess.run(model.clear_state_op)
+        predicted_labels = []
+        data_list = []
+        label_list = []
         for epoch_ind in range(30):
             perm = np.random.permutation(self.num_sequence)
             data = data[:,perm,:]
             labels = labels[:,perm]
             states,miss_rate,loss,predicted_label = sess.run([model.keep_state_op,model.miss_rate,model.loss,model.predicted_label],feed_dict={model.sequences:data,model.labels:labels})
             nmi = self.mutual_info(labels,predicted_label)
-            if not validation:
-                print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+            #if not validation:
+                #print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
+            if config.show_comparison_graph:
+                predicted_label = np.squeeze(predicted_label)
+                predicted_labels.append(predicted_label)
+                data = np.squeeze(data)
+                labels = np.squeeze(labels)
+                data_list.append(data)
+                label_list.append(labels)
+                data = np.expand_dims(data,axis=0)
+                labels = np.expand_dims(labels,axis=0)
+
         if validation:
             print("Epochs{}: Miss rate {}, NMI {}".format(epoch_ind,miss_rate,nmi))
         if config.show_comparison_graph:
             data = np.squeeze(data)
             labels = np.squeeze(labels)
             predicted_label = np.squeeze(predicted_label)
-            diff = np.abs(labels-predicted_label)
+            diff = np.abs(labels-(predicted_label+1)%2)
 
+            diff_sum = np.sum(diff)
+            if diff_sum > 50:
+                diff = np.abs(labels-(predicted_label+1)%2)
             fig = plt.figure()
-            ax = fig.add_subplot(311)
+            ax = fig.add_subplot(241)
 
             for i in range(self.k):
                 ax.scatter(data[labels==i,0], data[labels==i,1])
             ax.set_title('Original',fontsize=8)
             #ax.axis('scaled')
 
-            ax = fig.add_subplot(312)
+            ax = fig.add_subplot(242)
             for i in range(self.k):
-                ax.scatter(data[predicted_label==i,0], data[predicted_label==i,1])
-            ax.set_title('Predicton',fontsize=8)
+                ax.scatter(data_list[0][predicted_labels[0]==i,0], data_list[0][predicted_labels[0]==i,1])
+            ax.set_title('Predicton at Epoch 1',fontsize=8)
+
+
+            ax = fig.add_subplot(243)
+            for i in range(self.k):
+                ax.scatter(data_list[1][predicted_labels[1]==i,0], data_list[1][predicted_labels[1]==i,1])
+            ax.set_title('Predicton at Epoch 2',fontsize=8)
+
+
+            ax = fig.add_subplot(244)
+            for i in range(self.k):
+                ax.scatter(data_list[2][predicted_labels[2]==i,0], data_list[2][predicted_labels[2]==i,1])
+            ax.set_title('Predicton at Epoch 3',fontsize=8)
+
+
+            ax = fig.add_subplot(245)
+            for i in range(self.k):
+                ax.scatter(data_list[9][predicted_labels[9]==i,0], data_list[9][predicted_labels[9]==i,1])
+            ax.set_title('Predicton at Epoch 10',fontsize=8)
+
+
+            ax = fig.add_subplot(246)
+            for i in range(self.k):
+                ax.scatter(data_list[19][predicted_labels[19]==i,0], data_list[19][predicted_labels[19]==i,1])
+            ax.set_title('Predicton at Epoch 20',fontsize=8)
+
+            ax = fig.add_subplot(247)
+            for i in range(self.k):
+                ax.scatter(data_list[29][predicted_labels[29]==i,0], data_list[29][predicted_labels[29]==i,1])
+            ax.set_title('Predicton at Epoch 30',fontsize=8)
             #ax.axis('scaled')
 
-            ax = fig.add_subplot(313)
+            ax = fig.add_subplot(248)
             ax.scatter(data[diff==0,0], data[diff==0,1],color='black')
             ax.scatter(data[diff==1,0], data[diff==1,1],color='red')
             ax.set_title('Difference',fontsize=8)
             #ax.axis('scaled')
 
             plt.show()
-
+        return miss_rate
 
     def save_model(self, sess, epoch):
         print('\nsaving model...')
@@ -317,7 +361,7 @@ if __name__ == '__main__':
     parser.add_argument('--training_exp_num', default=100, type=int)
 
     config = parser.parse_args()
-
+    generator = Generator_minst(fea=config.fea)
     if not config.test:
         metaCluster = MetaCluster(config)
         with tf.Session() as sess:
@@ -327,7 +371,10 @@ if __name__ == '__main__':
                 data_list = []
                 labels_list = []
                 for _ in range(config.batch_size):
+                    #data_one, labels_one = generator.generate_train(metaCluster.num_sequence//2, metaCluster.fea)
                     data_one, labels_one = metaCluster.create_dataset()
+                    # data_one = np.expand_dims(data_one, axis=0)
+                    # labels_one = np.expand_dims(labels_one, axis=0)
                     data_list.append(data_one)
                     labels_list.append(labels_one)
                 data = np.concatenate(data_list)
@@ -340,7 +387,10 @@ if __name__ == '__main__':
                     data_list = []
                     labels_list = []
                     for _ in range(config.batch_size):
+                        #data_one, labels_one = generator.generate_train(metaCluster.num_sequence//2, metaCluster.fea)
                         data_one, labels_one = metaCluster.create_dataset()
+                        # data_one = np.expand_dims(data_one, axis=0)
+                        # labels_one = np.expand_dims(labels_one, axis=0)
                         data_list.append(data_one)
                         labels_list.append(labels_one)
                     data = np.concatenate(data_list)
@@ -380,20 +430,30 @@ if __name__ == '__main__':
             # data, labels = generator.generate(metaCluster.num_sequence//2)
             # data = np.expand_dims(data, axis=0)
             # labels = np.expand_dims(labels, axis=0)
-            # #data, labels = metaCluster.create_dataset()
+            # data, labels = metaCluster.create_dataset()
             # metaCluster.test(data,labels,sess)
 
-            generator = Generator_minst()
-            data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+            for _ in range(100):
+                data, labels = generator.generate(metaCluster.num_sequence//2, metaCluster.fea)
+
+                if metaCluster.config.show_graph:
+                    for i in range(metaCluster.k):
+                        plt.scatter(data[labels==i,0], data[labels==i,1])
+                    plt.show()
+
+                kmeans = KMeans(n_clusters=metaCluster.k, random_state=0).fit(data)
+                #print('Kmeans')
+                kmeans_miss_rate = np.sum(np.abs(labels-kmeans.labels_))
+                #print(np.minimum(kmeans_miss_rate,100-kmeans_miss_rate))
+
+                #print('Our Model')
+                data = np.expand_dims(data, axis=0)
+                labels = np.expand_dims(labels, axis=0)
+                miss_rate = metaCluster.test(data,labels,sess)
+                print(np.minimum(kmeans_miss_rate,metaCluster.num_sequence-kmeans_miss_rate)/metaCluster.num_sequence,miss_rate)
+
 
             #data, labels = eduGenerate()
 
             #data, labels = make_circles(100)
             #data, labels = make_moons(100)
-            kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
-            print(np.sum(np.abs(labels-kmeans.labels_)))
-
-            data = np.expand_dims(data, axis=0)
-            labels = np.expand_dims(labels, axis=0)
-            #data, labels = metaCluster.create_dataset()
-            metaCluster.test(data,labels,sess)
