@@ -13,7 +13,8 @@ from sklearn.datasets import make_moons
 from sklearn.cluster import KMeans
 from mnist import Generator_minst
 from sklearn.metrics import normalized_mutual_info_score
-
+import scipy
+import math
 # attention + bi-directional
 # maml
 # put lstm ouput into lstm
@@ -46,29 +47,81 @@ class MetaCluster():
         vars_ = {var.name.split(":")[0]: var for var in vars}
         self.saver = tf.train.Saver(vars_,max_to_keep=config.max_to_keep)
 
+    # def create_dataset(self):
+    #     labels = np.arange(self.num_sequence)%self.k
+    #     np.random.shuffle(labels)
+    #
+    #     data = np.zeros((self.num_sequence,self.fea))
+    #
+    #     mean = np.random.rand(self.k, self.fea)*2-1
+    #
+    #     sort_ind = np.argsort(mean[:,0])
+    #
+    #     for label_ind,ind in enumerate(sort_ind):
+    #         cov_factor = np.random.rand(1)*1+1
+    #         cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
+    #         cov = cov.T @ cov
+    #         # s = np.random.uniform(0.1,0.05,self.fea)
+    #         # cov = np.diag(s)
+    #         data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
+    #     if self.config.show_graph:
+    #         for i in range(self.k):
+    #             plt.scatter(data[labels==i,0], data[labels==i,1])
+    #         plt.show()
+    #
+    #     return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
+
+    # modifed from Prof.Verma version from gen_data.m, Wishart?
     def create_dataset(self):
         labels = np.arange(self.num_sequence)%self.k
         np.random.shuffle(labels)
 
         data = np.zeros((self.num_sequence,self.fea))
 
-        mean = np.random.rand(self.k, self.fea)*2-1
+        mean = np.random.rand(self.k, self.fea)*5-2.5
+        while np.sum(mean[0,:]-mean[1,:]) < 2:
+            mean = np.random.rand(self.k, self.fea)*5-2.5
 
         sort_ind = np.argsort(mean[:,0])
 
         for label_ind,ind in enumerate(sort_ind):
-            cov_factor = np.random.rand(1)*1+1
-            cov = np.random.normal(size=(self.fea,self.fea))/np.sqrt(self.fea*cov_factor)
-            cov = cov.T @ cov
-            # s = np.random.uniform(0.1,0.05,self.fea)
-            # cov = np.diag(s)
-            data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
+            # dt = randn(hn,hD)
+            data_for_label = np.random.randn(np.sum(labels==label_ind), self.fea)
+
+            # to have a more elliptical shape
+            # dt(:,2) = dt(:,2)*0.5*rand;
+            data_for_label[:,self.fea-1] = data_for_label[:,self.fea-1]*0.5*np.random.rand(1)
+            # rot = randn(hD,hD);
+            rot = np.random.randn(self.fea, self.fea)
+            # rot = orth(rot);
+            rot = scipy.linalg.orth(rot)
+            # dt = dt*rot;
+            data_for_label = data_for_label @ rot
+            data_for_label = data_for_label+mean[ind, :]
+            data[labels==label_ind,:] = data_for_label
+
+        data = self.make_twist(data)
+        #print(np.sum(mean[0,:]-mean[1,:]))
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
             plt.show()
 
+
         return np.expand_dims(data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
+
+    def make_twist(self,data):
+        # r= sqrt(sum(dat.*dat,2));
+        r = np.sqrt(np.sum(data*data,1))
+        # t = pi*r/5;
+        t = math.pi*r/5; # 5 -> magic number
+        # x = dat(:,1).*cos(t)+dat(:,2).*sin(t);
+        x = data[:,0]*np.cos(t) + data[:,1]*np.sin(t)
+        # y = -dat(:,1).*sin(t) + dat(:,2).*cos(t);
+        y = -1*data[:,0]*np.sin(t) + data[:,1]*np.cos(t)
+        twisted_data = np.column_stack((x,y))
+        return twisted_data
+
 
     def sampling_rnn(self, cell, initial_state, input_, seq_lengths):
 
@@ -364,6 +417,8 @@ if __name__ == '__main__':
     generator = Generator_minst(fea=config.fea)
     if not config.test:
         metaCluster = MetaCluster(config)
+        # for _ in range(10):
+        #     data_one, labels_one = metaCluster.create_dataset()
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             # training
