@@ -35,7 +35,7 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.01
         self.keep_prob = 0.8
-        self.alpha = 0.5
+        self.alpha = 0.8
         self.knn_k = 3
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
