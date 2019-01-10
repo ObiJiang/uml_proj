@@ -74,8 +74,8 @@ class MetaCluster():
             # cov = cov.T @ cov
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
 
-        #twisted_data = self.make_twist(data,labels)
-        twisted_data = data
+        twisted_data = self.make_twist(data,labels)
+        #twisted_data = data
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
