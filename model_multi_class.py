@@ -47,8 +47,8 @@ class MetaCluster():
         self.fea = config.fea
         self.lr = 0.003
         self.keep_prob = 0.8
-        self.alpha = 0.8
-        self.knn_k = 3
+        self.alpha = 1.0
+        self.knn_k = 5
         self.model = self.model()
         vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='core')
         vars_ = {var.name.split(":")[0]: var for var in vars}
@@ -74,7 +74,8 @@ class MetaCluster():
             # cov = cov.T @ cov
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
 
-        twisted_data = self.make_twist(data,labels)
+        #twisted_data = self.make_twist(data,labels)
+        twisted_data = data
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
