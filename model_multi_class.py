@@ -75,7 +75,15 @@ class MetaCluster():
             data[labels==label_ind,:] = np.random.multivariate_normal(mean[ind, :], cov, (np.sum(labels==label_ind)))
 
         twisted_data = self.make_twist(data,labels)
-        #twisted_data = data
+        mean_new = np.zeros((self.k,self.fea))
+        for k_ind in range(self.k):
+            mean_new[k_ind,:] = np.mean(twisted_data[labels==k_ind,:],axis=0)
+
+        sort_ind = np.argsort(mean_new[:,0])
+        labels_new = np.zeros((self.num_sequence))
+        for label_ind,ind in enumerate(sort_ind):
+            labels_new[labels==ind] = label_ind
+
         if self.config.show_graph:
             for i in range(self.k):
                 plt.scatter(data[labels==i,0], data[labels==i,1])
@@ -83,10 +91,10 @@ class MetaCluster():
             plt.show()
 
             for i in range(self.k):
-                plt.scatter(twisted_data[labels==i,0], twisted_data[labels==i,1])
+                plt.scatter(twisted_data[labels_new==i,0], twisted_data[labels_new==i,1])
             plt.show()
 
-        return np.expand_dims(twisted_data,axis=0),np.expand_dims(labels,axis=0).astype(np.int32)
+        return np.expand_dims(twisted_data,axis=0),np.expand_dims(labels_new,axis=0).astype(np.int32)
 
     def make_twist(self,data,labels):
         # r= sqrt(sum(dat.*dat,2));
